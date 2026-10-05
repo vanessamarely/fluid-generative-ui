@@ -30,8 +30,8 @@ export const DETAIL_LABELS: Record<AvatarGender, string[]> = {
   x: ['Nada', 'Aretes', 'Pecas'],
 };
 
-const SKINS = ['#f6d3b3', '#e8b48f', '#c98b62', '#9a6243', '#6b4330'];
-const HAIRS = ['#1e1e1e', '#5a3825', '#a0522d', '#d9a441', '#7b61ff'];
+export const SKIN_SWATCHES = ['#f6d3b3', '#e8b48f', '#c98b62', '#9a6243', '#6b4330'];
+export const HAIR_SWATCHES = ['#1e1e1e', '#5a3825', '#a0522d', '#d9a441', '#7b61ff'];
 const INK = '#1e1e1e';
 const SW = `stroke="${INK}" stroke-width="4" stroke-linejoin="round"`;
 
@@ -76,8 +76,8 @@ export function avatarSVG(o: AvatarOptions): string {
   const gender = o.gender ?? 'x';
   const bg = PASTEL[o.colorway];
   const dot = HALFTONE[o.colorway];
-  const skin = SKINS[o.skin % SKINS.length];
-  const hairColor = HAIRS[(o.hairColor ?? o.hair) % HAIRS.length];
+  const skin = SKIN_SWATCHES[o.skin % SKIN_SWATCHES.length];
+  const hairColor = HAIR_SWATCHES[(o.hairColor ?? o.hair) % HAIR_SWATCHES.length];
   const hair = hairStyle(gender, o.hair, hairColor);
   const lashes = gender === 'f' ? `<path d="M124 132l-6-6M130 129l-2-8M196 132l6-6M190 129l2-8" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>` : '';
   const mouths = [
@@ -88,15 +88,23 @@ export function avatarSVG(o: AvatarOptions): string {
   const lips = gender === 'f' && o.mood === 0 ? `<path d="M142 182c10 10 26 10 36 0" fill="none" stroke="#d9433f" stroke-width="5" stroke-linecap="round"/>` : mouths[o.mood % 3];
   const eyes =
     o.mood === 2
-      ? `<circle cx="136" cy="140" r="7" fill="${INK}"/><path d="M176 141h18" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`
-      : `<circle cx="136" cy="140" r="7" fill="${INK}"/><circle cx="184" cy="140" r="7" fill="${INK}"/>`;
+      ? `<ellipse cx="136" cy="140" rx="11" ry="13" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="138" cy="141" r="6" fill="${INK}"/><circle cx="140" cy="138" r="2" fill="#fff"/><path d="M176 141h18" stroke="${INK}" stroke-width="5" stroke-linecap="round"/>`
+      : `<g stroke="${INK}" stroke-width="3"><ellipse cx="136" cy="140" rx="11" ry="13" fill="#fff"/><ellipse cx="184" cy="140" rx="11" ry="13" fill="#fff"/></g><circle cx="138" cy="141" r="6" fill="${INK}"/><circle cx="186" cy="141" r="6" fill="${INK}"/><circle cx="140" cy="138" r="2" fill="#fff"/><circle cx="188" cy="138" r="2" fill="#fff"/>`;
+  const brows =
+    o.mood === 1
+      ? `<path d="M119 121c8-9 20-11 31-5M170 116c11-6 23-4 31 5" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`
+      : o.mood === 2
+        ? `<path d="M119 119c9-5 20-5 30 0M172 117l24-5" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`
+        : `<path d="M120 121c8-6 19-7 29-2M171 119c10-5 21-4 29 2" fill="none" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`;
+  const nose = `<path d="M160 149c-4 7-7 13-3 17 3 2 7 2 10-1" fill="none" stroke="#6b4330" stroke-width="3" stroke-linecap="round"/>`;
   const acc = [
     '',
     `<g fill="none" ${SW}><circle cx="136" cy="140" r="20"/><circle cx="184" cy="140" r="20"/><path d="M156 140h8"/></g>`,
     `<path d="M88 150c0-52 32-88 72-88s72 36 72 88" fill="none" stroke="${INK}" stroke-width="10"/><rect x="74" y="134" width="26" height="44" rx="12" fill="${dot}" ${SW}/><rect x="220" y="134" width="26" height="44" rx="12" fill="${dot}" ${SW}/>`,
     `<path d="M94 108c4-36 30-56 66-56s62 20 66 56Z" fill="${dot}" ${SW}/><path d="M150 106h108c0 12-14 20-32 20h-76Z" fill="${dot}" ${SW}/>`,
   ];
-  const body = gender === 'f' ? `<path d="M64 320c10-60 48-90 96-90s86 30 96 90Z" fill="#fff" ${SW}/><path d="M136 232l24 26 24-26" fill="none" ${SW}/>` : `<path d="M60 320c8-64 48-96 100-96s92 32 100 96Z" fill="#fff" ${SW}/>`;
+  const bodyShape = gender === 'f' ? `<path d="M64 320c10-60 48-90 96-90s86 30 96 90Z" fill="#fff" ${SW}/>` : `<path d="M60 320c8-64 48-96 100-96s92 32 100 96Z" fill="#fff" ${SW}/>`;
+  const body = `${bodyShape}<path d="M136 232l24 26 24-26" fill="none" ${SW}/><path d="M160 258v30" fill="none" stroke="#c3ecf6" stroke-width="5" stroke-linecap="round"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
 <defs><pattern id="p" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="3" fill="${dot}"/></pattern></defs>
 <rect width="320" height="320" fill="${bg}"/><rect width="320" height="320" fill="url(#p)" opacity=".7"/>
@@ -105,7 +113,8 @@ ${body}
 <rect x="142" y="200" width="36" height="34" fill="${skin}" ${SW}/>
 <ellipse cx="160" cy="144" rx="66" ry="72" fill="${skin}" ${SW}/>
 ${hair.front ?? ''}
-${eyes}${lashes}
+${brows}${eyes}${lashes}
+${nose}
 <circle cx="120" cy="166" r="9" fill="#ff7daf" opacity=".55"/><circle cx="200" cy="166" r="9" fill="#ff7daf" opacity=".55"/>
 ${detailSvg(gender, o.detail ?? 0, hairColor)}
 ${lips}

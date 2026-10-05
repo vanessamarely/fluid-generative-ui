@@ -32,16 +32,17 @@ import {
   createIcons,
   type IconNode,
 } from 'lucide';
-import { DETAIL_LABELS, GENDER_LABEL, HAIR_LABELS, avatarSVG, comicPortrait, svgDataUrl, type AvatarGender, type AvatarOptions } from '../shared/avatar';
+import { DETAIL_LABELS, GENDER_LABEL, HAIR_LABELS, HAIR_SWATCHES, SKIN_SWATCHES, avatarSVG, comicPortrait, svgDataUrl, type AvatarGender, type AvatarOptions } from '../shared/avatar';
 import { POWERS, TYPE_META, abilityFor, cardHTML, cardPNG, winnerCode } from '../shared/card';
 import { DEMO_URL, REPO_URL, SLIDES_URL } from '../shared/config';
 import { starRepo } from '../shared/github';
-import { QUESTIONS, REACTIONS, REACTION_META, type QuestionId, type Reaction } from '../shared/questions';
+import { QUESTIONS, REACTION_META, type QuestionId, type Reaction } from '../shared/questions';
 import { correctCount, getRealtime, type CardType, type Realtime, type SlideState, type Votes } from '../shared/realtime';
 
 const ICONS = { Brain, Camera, Check, Download, Flame, GitBranch, Hand, Heart, IdCard, Lightbulb, Map: MapIcon, NotebookPen, Presentation, Radio, Rocket, Send, Shuffle, Sparkles, Star, Trophy, X };
 const SHAPES: IconNode[] = [Triangle, Diamond, Circle, Square];
 const REACTION_ICONS: Record<Reaction, IconNode> = { fire: Flame, clap: Hand, mind: Brain, idea: Lightbulb, heart: Heart, rocket: Rocket };
+const REACTION_BAR: Reaction[] = ['fire', 'clap', 'mind', 'idea'];
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -401,7 +402,7 @@ const draftCard = () => ({
   type: draft.type,
   power: draft.power,
   years: draft.years,
-  ability: abilityFor(draft.type, draft.name || name || ''),
+  ability: abilityFor(draft.type, draft.power),
   image: draftImage(),
 });
 
@@ -453,25 +454,24 @@ function renderCardCreator(screen: HTMLElement) {
       });
     } else {
       const g = draft.avatar.gender;
-      const choice = (key: 'gender' | 'hair' | 'detail', labels: string[], values: (string | number)[]) =>
+      const choice = (key: 'gender' | 'hair' | 'detail' | 'accessory' | 'mood', labels: string[], values: (string | number)[]) =>
         `<div class="chips" role="radiogroup">${labels
           .map((l, i) => `<button type="button" role="radio" aria-checked="${String(draft.avatar[key]) === String(values[i])}" data-pick="${key}" data-value="${values[i]}">${l}</button>`)
           .join('')}</div>`;
-      const ranges: [keyof AvatarOptions, string, number][] = [
-        ['skin', 'Piel', 5],
-        ['hairColor', 'Color de cabello', 5],
-        ['accessory', 'Accesorio', 4],
-        ['mood', 'Expresión', 3],
-      ];
+      const swatches = (key: 'skin' | 'hairColor', label: string, colors: readonly string[]) =>
+        `<fieldset class="avatar-picker"><legend>${label}</legend><div class="avatar-swatches" role="radiogroup" aria-label="${label}">${colors
+          .map((color, i) => `<button type="button" class="avatar-swatch" role="radio" data-av="${key}" data-value="${i}" aria-label="${label} ${i + 1}" aria-checked="${draft.avatar[key] === i}" style="--swatch:${color}"></button>`)
+          .join('')}</div></fieldset>`;
       panel.innerHTML = `<p class="mini">Persona</p>${choice('gender', Object.values(GENDER_LABEL), Object.keys(GENDER_LABEL))}
         <p class="mini">Peinado</p>${choice('hair', HAIR_LABELS[g], [0, 1, 2, 3, 4])}
         <p class="mini">Detalle</p>${choice('detail', DETAIL_LABELS[g], [0, 1, 2])}
-        <div class="avatar-opts">${ranges
-          .map(([k, label, n]) => `<label><span>${label}</span><input type="range" min="0" max="${n - 1}" value="${draft.avatar[k]}" data-av="${k}" /></label>`)
-          .join('')}</div><button class="btn ghost" type="button" data-random>${icon(Shuffle, 16)} Sorpréndeme</button>`;
+        <div class="avatar-color-row">${swatches('skin', 'Piel', SKIN_SWATCHES)}${swatches('hairColor', 'Cabello', HAIR_SWATCHES)}</div>
+        <p class="mini">Accesorio</p>${choice('accessory', ['Ninguno', 'Lentes', 'Audífonos', 'Gorra'], [0, 1, 2, 3])}
+        <p class="mini">Expresión</p>${choice('mood', ['Sonrisa', 'Sorpresa', 'Guiño'], [0, 1, 2])}
+        <button class="btn ghost" type="button" data-random>${icon(Shuffle, 16)} Sorpréndeme</button>`;
       panel.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((b) =>
         b.addEventListener('click', () => {
-          const key = b.dataset.pick as 'gender' | 'hair' | 'detail';
+          const key = b.dataset.pick as 'gender' | 'hair' | 'detail' | 'accessory' | 'mood';
           if (key === 'gender') draft.avatar = { ...draft.avatar, gender: b.dataset.value as AvatarGender, hair: 0, detail: 0 };
           else draft.avatar = { ...draft.avatar, [key]: Number(b.dataset.value) };
           save();
@@ -479,9 +479,13 @@ function renderCardCreator(screen: HTMLElement) {
           preview();
         }),
       );
-      panel.querySelectorAll<HTMLInputElement>('[data-av]').forEach((inp) =>
-        inp.addEventListener('input', () => {
-          (draft.avatar[inp.dataset.av as keyof AvatarOptions] as number) = Number(inp.value);
+      panel.querySelectorAll<HTMLButtonElement>('[data-av]').forEach((button) =>
+        button.addEventListener('click', () => {
+          const key = button.dataset.av as 'skin' | 'hairColor';
+          draft.avatar[key] = Number(button.dataset.value);
+          panel.querySelectorAll<HTMLButtonElement>(`[data-av="${key}"]`).forEach((swatch) => {
+            swatch.setAttribute('aria-checked', String(swatch === button));
+          });
           save();
           preview();
         }),
@@ -592,7 +596,7 @@ function setupMenu() {
 
 function setupReactions() {
   const bar = $('[data-reactions]');
-  bar.innerHTML = REACTIONS.map(
+  bar.innerHTML = REACTION_BAR.map(
     (r) => `<button type="button" data-r="${r}" aria-label="${REACTION_META[r].label}" style="--c:${REACTION_META[r].color}">${icon(REACTION_ICONS[r], 26)}</button>`,
   ).join('');
   let last = 0;

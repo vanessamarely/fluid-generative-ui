@@ -1,15 +1,20 @@
 /* Card de asistente: compartida por el muro del deck y la app del público. */
-.dev-card { --cw: var(--p-blue); width: 100%; aspect-ratio: 5 / 7; border: 2px solid #1e1e1e; border-radius: 1.4em; background: var(--cw); color: #1e1e1e; padding: 0.9em; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto auto; gap: 0.45em; font-family: var(--sans); font-size: 14px; box-sizing: border-box; overflow: hidden; }
-.dev-card[data-colorway='green'] { --cw: #ccf6c5; } .dev-card[data-colorway='red'] { --cw: #f8d8d8; } .dev-card[data-colorway='yellow'] { --cw: #ffe7a5; } .dev-card[data-colorway='blue'] { --cw: #c3ecf6; }
-.dc-top { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25em; }
-.dc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dc-art { min-height: 0; border: 2px solid #1e1e1e; border-radius: 1em; overflow: hidden; background: #fff; }
+.dev-card { --cw: var(--p-blue); --card-accent: var(--blue); position: relative; width: 100%; aspect-ratio: 5 / 7; border: 2px solid #1e1e1e; border-radius: 1em; background: var(--cw); color: #1e1e1e; padding: 0.75em; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto auto; gap: 0.5em; font-family: var(--sans); font-size: 14px; box-sizing: border-box; overflow: hidden; box-shadow: 3px 3px 0 rgba(30, 30, 30, 0.22); }
+.dev-card[data-colorway='green'] { --cw: #ccf6c5; --card-accent: #34a853; } .dev-card[data-colorway='red'] { --cw: #f8d8d8; --card-accent: #ea4335; } .dev-card[data-colorway='yellow'] { --cw: #ffe7a5; --card-accent: #f9ab00; } .dev-card[data-colorway='blue'] { --cw: #c3ecf6; --card-accent: #4285f4; }
+.dc-top { display: flex; align-items: center; gap: 0.4em; font-weight: 700; font-size: 1.15em; }
+.dc-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-hp { flex: none; padding: 0.2em 0.5em; border: 1.5px solid #1e1e1e; border-radius: 999px; background: #fff; font: 500 0.72em var(--mono); }
+.dc-art { position: relative; min-height: 0; border: 2px solid #1e1e1e; border-radius: 0.8em; overflow: hidden; background: #fff; }
+.dc-art::after { content: ''; position: absolute; inset: 0; border: 1px solid rgba(255, 255, 255, 0.75); border-radius: inherit; pointer-events: none; }
 .dc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.dc-type { display: flex; align-items: center; gap: 0.4em; font: 300 0.85em 'Roboto Mono', monospace; }
+.dc-type { display: flex; align-items: center; gap: 0.4em; font: 300 0.78em var(--mono); }
 .dc-type img { width: 1.3em; height: 1.3em; }
-.dc-years { margin-left: auto; }
-.dc-move { display: flex; justify-content: space-between; font-size: 1.15em; font-weight: 700; border-top: 2px solid #1e1e1e; padding-top: 0.35em; }
-.dc-ability { margin: 0; font-size: 0.9em; line-height: 1.3; }
-.dc-foot { font: 300 0.7em 'Roboto Mono', monospace; opacity: 0.8; }
+.dc-type > span:first-of-type { padding: 0.12em 0.45em; border: 1px solid #1e1e1e; border-radius: 999px; background: #fff; font-weight: 500; }
+.dc-years { margin-left: auto; text-align: right; }
+.dc-move { display: flex; align-items: center; justify-content: space-between; gap: 0.4em; min-width: 0; padding: 0.35em 0.5em; border: 2px solid #1e1e1e; border-radius: 0.65em; background: #fff; font-size: 1em; font-weight: 700; }
+.dc-move strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-move > span { display: grid; flex: none; min-width: 2em; height: 2em; padding: 0 0.25em; place-items: center; border: 1.5px solid #1e1e1e; border-radius: 999px; background: var(--card-accent); }
+.dc-ability { display: -webkit-box; min-height: 2.55em; margin: 0; padding: 0.35em 0.5em; overflow: hidden; border: 1.5px dashed #1e1e1e; border-radius: 0.55em; background: rgba(255, 255, 255, 0.56); font-size: 0.78em; line-height: 1.25; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.dc-foot { border-top: 1.5px solid #1e1e1e; padding-top: 0.3em; font: 300 0.62em var(--mono); opacity: 0.8; }
 .dev-card[data-hidden] { opacity: 0.25; filter: grayscale(1); }
 

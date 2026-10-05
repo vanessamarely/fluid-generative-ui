@@ -18,16 +18,25 @@ export const HALFTONE: Record<string, string> = { blue: '#57caff', green: '#5cdb
 export const hpFor = (years: number) => Math.min(250, 40 + years * 15);
 export const damageFor = (years: number, power: string) => 20 + years * 7 + (power.length % 5) * 5;
 
-const ABILITY: Record<CardType, string[]> = {
-  web: ['Reserva el espacio antes de que llegue el contenido: CLS 0.', 'Reutiliza el DOM con claves estables y nunca pierde un clic.', 'Lanza View Transitions sin marear a nadie.'],
-  ia: ['Corre Gemini Nano sin red, sin costo y sin filtrar datos.', 'Convierte tokens en interfaces con un schema cerrado.', 'Verifica lo que propone el modelo antes de mostrarlo.'],
-  cloud: ['Despliega en Firebase antes de que termine el café.', 'Cae a la nube solo cuando el dispositivo no puede.', 'Escala a mil asistentes sin pestañear.'],
-  mobile: ['Funciona offline y en el peor 3G del evento.', 'Respeta prefers-reduced-motion como buena persona.', 'Diseña para el pulgar primero.'],
+const TYPE_CONTEXT: Record<CardType, string> = { web: 'Web', ia: 'IA', cloud: 'Cloud', mobile: 'Mobile' };
+const POWER_MOVE: Record<string, string> = {
+  Angular: 'ordena componentes con claridad',
+  React: 'actualiza solo lo que cambia',
+  Firebase: 'sincroniza cada cambio al instante',
+  Gemini: 'convierte ideas en sugerencias',
+  Flutter: 'lleva la interfaz a otras pantallas',
+  Kotlin: 'estructura la lógica con seguridad',
+  CSS: 'adapta cada pantalla al espacio',
+  Accesibilidad: 'abre el flujo a más personas',
+  'Cloud Run': 'escala servicios cuando sube la demanda',
+  WebMCP: 'conecta agentes con herramientas',
+  'Node.js': 'atiende eventos sin bloquear la interfaz',
+  Python: 'automatiza tareas repetitivas',
 };
 
-export function abilityFor(type: CardType, name: string): string {
-  const list = ABILITY[type];
-  return list[[...name].reduce((s, c) => s + c.charCodeAt(0), 0) % list.length];
+export function abilityFor(type: CardType, power: string): string {
+  const move = POWER_MOVE[power] ?? 'resuelve retos con creatividad';
+  return `${TYPE_CONTEXT[type]} · ${power}: ${move}.`;
 }
 
 /** Código corto y estable por usuario: el ganador lo ve en su celular y en la pantalla. */
@@ -72,6 +81,9 @@ export async function cardPNG(card: Pick<CardData, 'name' | 'type' | 'power' | '
     g.beginPath();
     g.roundRect(x, y, w, h, r);
   };
+  rr(8, 8, W - 16, H - 16, 36);
+  g.fillStyle = 'rgba(30, 30, 30, 0.2)';
+  g.fill();
   rr(4, 4, W - 8, H - 8, 36);
   g.fillStyle = PASTEL[meta.colorway];
   g.fill();
@@ -79,11 +91,23 @@ export async function cardPNG(card: Pick<CardData, 'name' | 'type' | 'power' | '
   g.strokeStyle = ink;
   g.stroke();
   g.fillStyle = ink;
-  g.font = '700 38px "Google Sans", system-ui, sans-serif';
-  g.fillText(card.name.slice(0, 18), 36, 70);
-  g.font = '500 28px "Google Sans", system-ui, sans-serif';
-  g.textAlign = 'right';
-  g.fillText(`HP ${hpFor(card.years)}`, W - 36, 70);
+  rr(28, 24, W - 210, 58, 18);
+  g.fillStyle = '#fff';
+  g.fill();
+  g.lineWidth = 2;
+  g.strokeStyle = ink;
+  g.stroke();
+  g.fillStyle = ink;
+  g.font = '700 34px "Google Sans", system-ui, sans-serif';
+  g.fillText(card.name.slice(0, 18), 42, 62);
+  rr(W - 166, 24, 132, 58, 29);
+  g.fillStyle = '#fff';
+  g.fill();
+  g.stroke();
+  g.fillStyle = ink;
+  g.font = '500 24px "Roboto Mono", monospace';
+  g.textAlign = 'center';
+  g.fillText(`HP ${hpFor(card.years)}`, W - 100, 61);
   g.textAlign = 'left';
   const img = new Image();
   img.src = card.image;
@@ -97,30 +121,57 @@ export async function cardPNG(card: Pick<CardData, 'name' | 'type' | 'power' | '
   g.restore();
   rr(36, 96, W - 72, W - 72, 24);
   g.stroke();
-  const y = 96 + W - 72 + 44;
-  g.font = '300 22px "Roboto Mono", monospace';
+  const y = 96 + W - 72 + 36;
+  g.font = '300 19px "Roboto Mono", monospace';
   g.fillText(`Tipo ${meta.label} · ${card.years} años programando`, 36, y);
-  g.font = '700 32px "Google Sans", system-ui, sans-serif';
-  g.fillText(card.power, 36, y + 50);
-  g.textAlign = 'right';
-  g.fillText(String(damageFor(card.years, card.power)), W - 36, y + 50);
+  rr(36, y + 12, W - 72, 72, 18);
+  g.fillStyle = '#fff';
+  g.fill();
+  g.lineWidth = 2;
+  g.strokeStyle = ink;
+  g.stroke();
+  g.fillStyle = ink;
+  g.font = '300 14px "Roboto Mono", monospace';
+  g.fillText('SUPERPODER', 52, y + 34);
+  g.font = '700 27px "Google Sans", system-ui, sans-serif';
+  g.fillText(card.power, 52, y + 63);
+  rr(W - 102, y + 22, 48, 48, 24);
+  g.fillStyle = HALFTONE[meta.colorway];
+  g.fill();
+  g.strokeStyle = ink;
+  g.stroke();
+  g.fillStyle = ink;
+  g.font = '700 21px "Google Sans", system-ui, sans-serif';
+  g.textAlign = 'center';
+  g.fillText(String(damageFor(card.years, card.power)), W - 78, y + 52);
   g.textAlign = 'left';
-  g.font = '400 22px "Google Sans", system-ui, sans-serif';
-  wrap(g, card.ability, 36, y + 92, W - 72, 28);
+  rr(36, y + 94, W - 72, 52, 14);
+  g.fillStyle = 'rgba(255, 255, 255, 0.65)';
+  g.fill();
+  g.setLineDash([7, 5]);
+  g.strokeStyle = ink;
+  g.stroke();
+  g.setLineDash([]);
+  g.fillStyle = ink;
+  g.font = '400 19px "Google Sans", system-ui, sans-serif';
+  wrap(g, card.ability, 50, y + 115, W - 100, 22, 2);
   g.font = '300 16px "Roboto Mono", monospace';
-  g.fillText('DevFest Santo Domingo 2026 · IA rápida, UI fluida', 36, H - 30);
+  g.fillText('DevFest Santo Domingo 2026 · IA rápida, UI fluida', 36, H - 22);
   return new Promise((res) => c.toBlob((b) => res(b!), 'image/png'));
 }
 
-function wrap(g: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number) {
+function wrap(g: CanvasRenderingContext2D, text: string, x: number, y: number, max: number, lh: number, maxLines: number) {
   let line = '';
+  let lines = 0;
   for (const word of text.split(' ')) {
     const test = line ? `${line} ${word}` : word;
     if (g.measureText(test).width > max && line) {
+      if (lines >= maxLines - 1) break;
       g.fillText(line, x, y);
       line = word;
       y += lh;
+      lines++;
     } else line = test;
   }
-  if (line) g.fillText(line, x, y);
+  if (line && lines < maxLines) g.fillText(line, x, y);
 }
