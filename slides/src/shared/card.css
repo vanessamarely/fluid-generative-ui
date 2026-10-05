@@ -1,9 +1,9 @@
 /* Card de asistente: compartida por el muro del deck y la app del público. */
-.dev-card { --cw: var(--p-blue); width: 100%; aspect-ratio: 5 / 7; border: 2px solid #1e1e1e; border-radius: 1.4em; background: var(--cw); color: #1e1e1e; padding: 0.9em; display: grid; grid-template-rows: auto auto auto auto 1fr auto; gap: 0.45em; font-family: var(--sans); font-size: 14px; box-sizing: border-box; overflow: hidden; }
+.dev-card { --cw: var(--p-blue); width: 100%; aspect-ratio: 5 / 7; border: 2px solid #1e1e1e; border-radius: 1.4em; background: var(--cw); color: #1e1e1e; padding: 0.9em; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto auto auto; gap: 0.45em; font-family: var(--sans); font-size: 14px; box-sizing: border-box; overflow: hidden; }
 .dev-card[data-colorway='green'] { --cw: #ccf6c5; } .dev-card[data-colorway='red'] { --cw: #f8d8d8; } .dev-card[data-colorway='yellow'] { --cw: #ffe7a5; } .dev-card[data-colorway='blue'] { --cw: #c3ecf6; }
 .dc-top { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25em; }
 .dc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dc-art { aspect-ratio: 1; border: 2px solid #1e1e1e; border-radius: 1em; overflow: hidden; background: #fff; }
+.dc-art { min-height: 0; border: 2px solid #1e1e1e; border-radius: 1em; overflow: hidden; background: #fff; }
 .dc-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dc-type { display: flex; align-items: center; gap: 0.4em; font: 300 0.85em 'Roboto Mono', monospace; }
 .dc-type img { width: 1.3em; height: 1.3em; }

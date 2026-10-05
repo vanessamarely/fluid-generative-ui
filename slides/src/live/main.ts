@@ -1,0 +1,559 @@
+// App del público (celular). Sigue al deck en vivo y aplica las mismas ideas de la charla:
+//  · Escucha UN solo documento (el slide actual) + su propio voto: barato y rápido.
+//  · Pantallas con altura reservada; los cambios se aplican por clave (sin recrear todo).
+//  · La card se genera EN EL DISPOSITIVO: la foto nunca sale del teléfono.
+import {
+  Brain,
+  Camera,
+  Check,
+  Circle,
+  Diamond,
+  Download,
+  Flame,
+  GitBranch,
+  Hand,
+  Heart,
+  IdCard,
+  Lightbulb,
+  Map as MapIcon,
+  NotebookPen,
+  Presentation,
+  Radio,
+  Rocket,
+  Send,
+  Shuffle,
+  Sparkles,
+  Square,
+  Star,
+  Triangle,
+  Trophy,
+  X,
+  createElement,
+  createIcons,
+  type IconNode,
+} from 'lucide';
+import { avatarSVG, comicPortrait, svgDataUrl, type AvatarOptions } from '../shared/avatar';
+import { POWERS, TYPE_META, abilityFor, cardHTML, cardPNG, winnerCode } from '../shared/card';
+import { DEMO_URL, REPO_URL, SLIDES_URL } from '../shared/config';
+import { starRepo } from '../shared/github';
+import { QUESTIONS, REACTIONS, REACTION_META, type QuestionId, type Reaction } from '../shared/questions';
+import { correctCount, getRealtime, type CardType, type Realtime, type SlideState, type Votes } from '../shared/realtime';
+
+const ICONS = { Brain, Camera, Check, Download, Flame, GitBranch, Hand, Heart, IdCard, Lightbulb, Map: MapIcon, NotebookPen, Presentation, Radio, Rocket, Send, Shuffle, Sparkles, Star, Trophy, X };
+const SHAPES: IconNode[] = [Triangle, Diamond, Circle, Square];
+const REACTION_ICONS: Record<Reaction, IconNode> = { fire: Flame, clap: Hand, mind: Brain, idea: Lightbulb, heart: Heart, rocket: Rocket };
+
+const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
+const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+const icon = (node: IconNode, size = 22) => {
+  const el = createElement(node);
+  el.setAttribute('width', String(size));
+  el.setAttribute('height', String(size));
+  el.setAttribute('aria-hidden', 'true');
+  return el.outerHTML;
+};
+const store = {
+  get<T>(k: string, fallback: T): T {
+    try {
+      return JSON.parse(localStorage.getItem(`live.${k}`) ?? 'null') ?? fallback;
+    } catch {
+      return fallback;
+    }
+  },
+  set(k: string, v: unknown) {
+    try {
+      localStorage.setItem(`live.${k}`, JSON.stringify(v));
+    } catch {
+      /* noop */
+    }
+  },
+};
+
+// ── Apodos generados (sin texto libre: nada inapropiado llega al proyector) ──
+const NOUNS = ['Pixel', 'Token', 'Gremlin', 'Prompt', 'Nano', 'Slot', 'Stream', 'Frame', 'Agente', 'Cometa', 'Colibrí', 'Tiburón', 'Merengue', 'Mango', 'Coquí'];
+const ADJS = ['Veloz', 'Fluido', 'Valiente', 'Curioso', 'Brillante', 'Sereno', 'Épico', 'Ninja', 'Cósmico', 'Tropical', 'Ágil', 'Sabio'];
+const randomName = () => `${NOUNS[Math.floor(Math.random() * NOUNS.length)]} ${ADJS[Math.floor(Math.random() * ADJS.length)]}`;
+
+const BANNED = /(put[ao]|mierd|cul[oa]|pend[ae]j|verga|coñ|carajo|fuck|shit|sex|nazi)/i;
+const cleanName = (s: string) => (BANNED.test(s) ? randomName() : s.trim().slice(0, 18)) || randomName();
+
+// ── Estado ──────────────────────────────────────────────────────────────
+let rt: Realtime;
+let slide: SlideState | null = null;
+let myVotes: Votes = {};
+let view: 'live' | 'card' | 'notes' = 'live';
+let name: string | null = store.get('name', null);
+let liked = store.get('liked', false);
+let card = store.get<null | { published: boolean }>('card', null);
+const notes = store.get<{ label: string; tip: string }[]>('notes', []);
+
+async function boot() {
+  createIcons({ icons: ICONS, attrs: { 'stroke-width': 1.75, 'aria-hidden': 'true' } });
+  setupMenu();
+  setupReactions();
+  rt = await getRealtime();
+  $('[data-status]').textContent = rt.mode === 'local' ? 'Modo ensayo (local) · esperando el deck…' : 'Conectado · esperando el deck…';
+  rt.onSlide((s) => {
+    const changed = s.index !== slide?.index || s.kind !== slide?.kind;
+    slide = s;
+    if (s.tip && !notes.some((n) => n.tip === s.tip)) {
+      notes.push({ label: s.label, tip: s.tip });
+      store.set('notes', notes);
+    }
+    $('[data-status]').textContent = `En vivo · ${s.label} · ${s.index + 1}/${s.total}`;
+    if (view === 'live') render(changed);
+  });
+  rt.onMyVotes((v) => {
+    myVotes = v;
+    renderScore();
+    if (view === 'live' && slide?.kind === 'poll') render(false);
+  });
+  if (name) void rt.join(name);
+  render(true);
+}
+
+function renderScore() {
+  const el = $('[data-score]');
+  const answered = Object.keys(myVotes).length;
+  el.hidden = !name;
+  el.innerHTML = `${icon(Trophy, 16)} ${correctCount(myVotes)}/${answered || 0} aciertos`;
+}
+
+// ── Pantallas ───────────────────────────────────────────────────────────
+function render(full: boolean) {
+  const screen = $('#screen');
+  if (view === 'card') return renderCardCreator(screen);
+  if (view === 'notes') return renderNotes(screen);
+  if (!name) return renderJoin(screen);
+  const kind = slide?.kind ?? 'content';
+  // Encuesta: solo actualizamos lo que cambia (no recreamos la pantalla en cada voto).
+  if (!full && kind === 'poll' && screen.dataset.screen === `poll-${slide?.qid}`) return updatePoll(screen);
+  screen.dataset.screen = kind === 'poll' ? `poll-${slide?.qid}` : kind;
+  if (kind === 'poll' && slide?.qid) return renderPoll(screen, slide.qid);
+  if (kind === 'join') return renderLobby(screen);
+  if (kind === 'podium') return renderPodium(screen);
+  if (kind === 'cards') return renderCardsCta(screen);
+  if (kind === 'end') return renderEnd(screen);
+  return renderContent(screen);
+}
+
+function renderJoin(screen: HTMLElement) {
+  screen.dataset.screen = 'join-name';
+  let options = [randomName(), randomName(), randomName()];
+  const draw = () => {
+    screen.innerHTML = `<section class="card-sheet">
+      <p class="kicker">Bienvenida/o a la charla</p>
+      <h1>Elige tu apodo</h1>
+      <p class="muted">Aparecerá en la pantalla y en el podio. Sin correo, sin contraseña.</p>
+      <div class="name-options" role="radiogroup" aria-label="Apodos">${options
+        .map((o, i) => `<button type="button" role="radio" aria-checked="${i === 0}" data-name="${esc(o)}">${esc(o)}</button>`)
+        .join('')}</div>
+      <div class="row"><button class="btn ghost" type="button" data-shuffle>${icon(Shuffle, 18)} Otros apodos</button>
+      <button class="btn primary" type="button" data-join>Entrar</button></div>
+    </section>`;
+    screen.querySelectorAll<HTMLButtonElement>('[data-name]').forEach((b) =>
+      b.addEventListener('click', () => screen.querySelectorAll('[data-name]').forEach((x) => x.setAttribute('aria-checked', String(x === b)))),
+    );
+    $('[data-shuffle]', screen).addEventListener('click', () => {
+      options = [randomName(), randomName(), randomName()];
+      draw();
+    });
+    $('[data-join]', screen).addEventListener('click', async () => {
+      name = screen.querySelector<HTMLElement>('[aria-checked="true"]')?.dataset.name ?? options[0];
+      store.set('name', name);
+      await rt.join(name);
+      renderScore();
+      render(true);
+    });
+  };
+  draw();
+}
+
+function renderLobby(screen: HTMLElement) {
+  screen.innerHTML = `<section class="card-sheet">
+    <p class="kicker">Hola, ${esc(name)}</p>
+    <h1>¡Estás dentro!</h1>
+    <p class="muted">Habrá 3 preguntas sobre lo que vamos explicando. Puntos por acertar y por rapidez.</p>
+    <button class="big-like" type="button" aria-pressed="${liked}" data-like>${icon(Heart, 30)}<span>${liked ? '¡Gracias por el like!' : 'Dale like a la charla'}</span></button>
+    <div class="star-box">
+      <p><b>${icon(Star, 18)} ¿Te gusta el repo?</b> Dale una estrella en GitHub.</p>
+      <div class="row">
+        <a class="btn" href="${REPO_URL}" target="_blank" rel="noreferrer">Abrir en GitHub</a>
+        <button class="btn primary" type="button" data-star>${icon(Star, 18)} Estrella automática</button>
+      </div>
+      <p class="fine">La estrella automática te pide iniciar sesión con GitHub (permiso <code>public_repo</code>). Usamos el token <b>una sola vez</b> y no guardamos tu usuario.</p>
+      <p class="fine" data-star-msg role="status"></p>
+    </div>
+    <button class="btn wide" type="button" data-go-card>${icon(IdCard, 18)} Crear mi card mientras escucho</button>
+  </section>`;
+  $('[data-like]', screen).addEventListener('click', async (e) => {
+    liked = !liked;
+    store.set('liked', liked);
+    (e.currentTarget as HTMLElement).setAttribute('aria-pressed', String(liked));
+    (e.currentTarget as HTMLElement).querySelector('span')!.textContent = liked ? '¡Gracias por el like!' : 'Dale like a la charla';
+    await rt.setLike(liked);
+  });
+  $('[data-star]', screen).addEventListener('click', async () => {
+    const msg = $('[data-star-msg]', screen);
+    msg.textContent = 'Abriendo GitHub…';
+    try {
+      const auth = await rt.githubTokenForStar();
+      if (!auth) {
+        msg.innerHTML = `En este modo no hay login: <a href="${REPO_URL}" target="_blank" rel="noreferrer">dale la estrella aquí</a>.`;
+        return;
+      }
+      msg.textContent = (await starRepo(auth.token)) ? `¡Gracias, @${auth.login}! Estrella enviada.` : 'GitHub no aceptó la estrella; usa el botón "Abrir en GitHub".';
+    } catch {
+      msg.textContent = 'Se canceló el inicio de sesión. Puedes usar "Abrir en GitHub".';
+    }
+  });
+  $('[data-go-card]', screen).addEventListener('click', () => go('card'));
+}
+
+function renderPoll(screen: HTMLElement, qid: QuestionId) {
+  const q = QUESTIONS[qid];
+  screen.innerHTML = `<section class="poll" data-q="${qid}">
+    <div class="poll-head"><p class="kicker">Pregunta ${qid.slice(1)} de 3 · ${esc(q.topic)}</p><span class="timer" data-timer>30</span></div>
+    <h1>${esc(q.text)}</h1>
+    <div class="answers">${q.options
+      .map((o, i) => `<button type="button" class="answer" data-opt="${o.id}" data-i="${i}"><span class="shape">${icon(SHAPES[i], 24)}</span><span>${esc(o.label)}</span></button>`)
+      .join('')}</div>
+    <p class="poll-msg" data-msg role="status"></p>
+  </section>`;
+  screen.querySelectorAll<HTMLButtonElement>('.answer').forEach((b) =>
+    b.addEventListener('click', async () => {
+      if (myVotes[qid] || closed(qid)) return;
+      b.classList.add('pending');
+      await rt.vote(qid, b.dataset.opt!);
+    }),
+  );
+  updatePoll(screen);
+}
+
+const closed = (qid: QuestionId) => {
+  const opened = slide?.openedAt?.[qid];
+  return Boolean(slide?.revealed?.[qid]) || (opened ? Date.now() - opened > (slide?.duration ?? 30) * 1000 : false);
+};
+
+function updatePoll(screen: HTMLElement) {
+  const qid = slide?.qid as QuestionId | undefined;
+  if (!qid) return;
+  const q = QUESTIONS[qid];
+  const mine = myVotes[qid];
+  const revealed = Boolean(slide?.revealed?.[qid]);
+  screen.querySelectorAll<HTMLButtonElement>('.answer').forEach((b) => {
+    const opt = b.dataset.opt;
+    b.disabled = Boolean(mine) || closed(qid);
+    b.classList.remove('pending');
+    b.toggleAttribute('data-mine', opt === mine);
+    b.toggleAttribute('data-correct', revealed && opt === q.correct);
+    b.toggleAttribute('data-wrong', revealed && opt === mine && mine !== q.correct);
+  });
+  const msg = $('[data-msg]', screen);
+  if (revealed) {
+    const ok = mine === q.correct;
+    msg.className = `poll-msg ${ok ? 'ok' : mine ? 'bad' : ''}`;
+    msg.innerHTML = `${mine ? (ok ? `${icon(Check, 18)} <b>¡Correcto!</b>` : '<b>Casi.</b>') : '<b>No respondiste a tiempo.</b>'} ${esc(q.explain)}`;
+  } else if (mine) {
+    msg.className = 'poll-msg';
+    msg.innerHTML = `${icon(Send, 18)} Respuesta enviada. Mira la pantalla para el resultado.`;
+  } else msg.textContent = '';
+}
+
+// Temporizador del celular: un solo intervalo, solo toca el número.
+setInterval(() => {
+  const el = document.querySelector<HTMLElement>('[data-timer]');
+  const qid = slide?.qid as QuestionId | undefined;
+  if (!el || !qid || !slide) return;
+  const opened = slide.openedAt?.[qid];
+  const left = opened ? Math.max(0, Math.ceil(slide.duration - (Date.now() - opened) / 1000)) : slide.duration;
+  if (el.textContent !== String(left)) {
+    el.textContent = String(left);
+    if (left === 0) updatePoll($('#screen'));
+  }
+}, 250);
+
+function renderContent(screen: HTMLElement) {
+  const tip = slide?.tip;
+  const demo = slide?.kind === 'demo';
+  screen.innerHTML = `<section class="card-sheet">
+    <p class="kicker">Ahora en pantalla</p>
+    <h1>${esc(slide?.title || 'La charla está por empezar')}</h1>
+    ${tip ? `<div class="pocket">${icon(NotebookPen, 18)}<p><b>Nota de bolsillo</b><br>${esc(tip)}</p></div>` : ''}
+    ${demo ? `<a class="btn wide primary" href="${DEMO_URL}" target="_blank" rel="noreferrer">${icon(MapIcon, 18)} Abrir la demo en tu celular</a>` : ''}
+    <p class="muted small">Tus notas se guardan solas en <b>Menú → Mis notas</b>.</p>
+  </section>`;
+}
+
+function renderCardsCta(screen: HTMLElement) {
+  screen.innerHTML = `<section class="card-sheet">
+    <p class="kicker">Muro de la comunidad</p>
+    <h1>${card?.published ? '¡Tu card está en la pantalla!' : '¿Ya creaste tu card?'}</h1>
+    <p class="muted">Tu foto se convierte en cómic <b>dentro de tu celular</b>: nunca la subimos. Crear tu card suma 300 puntos.</p>
+    <button class="btn wide primary" type="button" data-go-card>${icon(IdCard, 18)} ${card?.published ? 'Editar mi card' : 'Crear mi card'}</button>
+  </section>`;
+  $('[data-go-card]', screen).addEventListener('click', () => go('card'));
+}
+
+function renderPodium(screen: HTMLElement) {
+  const myCode = winnerCode(rt.uid());
+  const podium = (slide?.podium ?? []) as { name: string; score: number; code?: string }[];
+  const pos = podium.findIndex((p) => p.code === myCode);
+  const winner = pos === 0;
+  screen.innerHTML = `<section class="card-sheet podium-card ${winner ? 'winner' : ''}">
+    <p class="kicker">Podio</p>
+    ${
+      winner
+        ? `<h1>${icon(Trophy, 30)} ¡Ganaste, ${esc(name)}!</h1><p>Acércate al escenario y muestra este código:</p><p class="code">${myCode}</p>`
+        : pos > 0
+          ? `<h1>Quedaste en el puesto ${pos + 1}</h1><p class="muted">${podium[pos].score.toLocaleString('es-DO')} puntos. ¡Gran partida!</p>`
+          : `<h1>¡Gracias por jugar!</h1><p class="muted">Acertaste ${correctCount(myVotes)} de 3. El podio está en la pantalla.</p>`
+    }
+    <p class="fine">Tu código: <b>${myCode}</b></p>
+  </section>`;
+}
+
+function renderEnd(screen: HTMLElement) {
+  screen.innerHTML = `<section class="card-sheet">
+    <p class="kicker">¡Gracias!</p>
+    <h1>IA rápida, UI fluida</h1>
+    <p class="muted">Todo el código (deck, esta app y la demo) está en el repo.</p>
+    <a class="btn wide primary" href="${REPO_URL}" target="_blank" rel="noreferrer">${icon(GitBranch, 18)} Ver el repositorio</a>
+    <a class="btn wide" href="${DEMO_URL}" target="_blank" rel="noreferrer">${icon(MapIcon, 18)} Probar Rumbo</a>
+    <button class="btn wide" type="button" data-go-notes>${icon(NotebookPen, 18)} Mis ${notes.length} notas</button>
+  </section>`;
+  $('[data-go-notes]', screen).addEventListener('click', () => go('notes'));
+}
+
+function renderNotes(screen: HTMLElement) {
+  screen.dataset.screen = 'notes';
+  screen.innerHTML = `<section class="card-sheet">
+    <p class="kicker">Notas de bolsillo</p>
+    <h1>Lo que me llevo</h1>
+    ${notes.length ? `<ol class="notes">${notes.map((n) => `<li><b>${esc(n.label)}</b><span>${esc(n.tip)}</span></li>`).join('')}</ol>` : '<p class="muted">Se irán llenando solas mientras avanza la charla.</p>'}
+    <button class="btn wide" type="button" data-back>Volver al en vivo</button>
+  </section>`;
+  $('[data-back]', screen).addEventListener('click', () => go('live'));
+}
+
+// ── Creador de card (todo en el dispositivo) ────────────────────────────
+interface Draft {
+  name: string;
+  type: CardType;
+  power: string;
+  years: number;
+  mode: 'avatar' | 'photo';
+  avatar: AvatarOptions;
+  photo: string | null;
+}
+let draft: Draft = store.get('draft', {
+  name: '',
+  type: 'web',
+  power: 'Angular',
+  years: 3,
+  mode: 'avatar',
+  avatar: { colorway: 'green', skin: 1, hair: 0, accessory: 1, mood: 0 },
+  photo: null,
+});
+
+function draftImage(): string {
+  if (draft.mode === 'photo' && draft.photo) return draft.photo;
+  return svgDataUrl(avatarSVG({ ...draft.avatar, colorway: TYPE_META[draft.type].colorway }));
+}
+const draftCard = () => ({
+  name: cleanName(draft.name || name || randomName()),
+  type: draft.type,
+  power: draft.power,
+  years: draft.years,
+  ability: abilityFor(draft.type, draft.name || name || ''),
+  image: draftImage(),
+});
+
+function renderCardCreator(screen: HTMLElement) {
+  screen.dataset.screen = 'card';
+  draft.name ||= name ?? '';
+  screen.innerHTML = `<section class="card-sheet creator">
+    <div class="creator-head"><p class="kicker">Mi card</p><button class="icon-btn" type="button" data-close aria-label="Cerrar">${icon(X, 20)}</button></div>
+    <div class="preview" data-preview></div>
+    <label class="field"><span>Nombre en la card</span><input data-f="name" maxlength="18" value="${esc(draft.name)}" autocomplete="nickname" /></label>
+    <fieldset class="field"><legend>Tipo</legend><div class="types">${(Object.keys(TYPE_META) as CardType[])
+      .map((t) => `<button type="button" data-type="${t}" aria-pressed="${draft.type === t}"><img src="/brand/${TYPE_META[t].icon}.svg" alt="" width="22" height="22"/>${TYPE_META[t].label}</button>`)
+      .join('')}</div></fieldset>
+    <div class="row2">
+      <label class="field"><span>Superpoder</span><select data-f="power">${POWERS.map((p) => `<option ${p === draft.power ? 'selected' : ''}>${p}</option>`).join('')}</select></label>
+      <label class="field"><span>Años programando: <b data-years>${draft.years}</b></span><input type="range" min="0" max="30" value="${draft.years}" data-f="years" /></label>
+    </div>
+    <fieldset class="field"><legend>Imagen</legend>
+      <div class="segmented" role="radiogroup">
+        <button type="button" role="radio" aria-checked="${draft.mode === 'avatar'}" data-mode="avatar">${icon(Sparkles, 16)} Avatar generativo</button>
+        <button type="button" role="radio" aria-checked="${draft.mode === 'photo'}" data-mode="photo">${icon(Camera, 16)} Mi foto en cómic</button>
+      </div>
+      <div data-mode-panel></div>
+    </fieldset>
+    <p class="fine">Todo se genera <b>en tu celular</b> (canvas y SVG). Tu foto original <b>nunca</b> se sube: solo publicamos la card final si tú quieres.</p>
+    <div class="row">
+      <button class="btn" type="button" data-download>${icon(Download, 18)} Descargar</button>
+      <button class="btn primary" type="button" data-publish>${icon(Send, 18)} ${card?.published ? 'Actualizar en el muro' : 'Publicar en el muro'}</button>
+    </div>
+    <p class="fine" data-card-msg role="status"></p>
+  </section>`;
+
+  const save = () => store.set('draft', draft);
+  const preview = () => {
+    $('[data-preview]', screen).innerHTML = cardHTML(draftCard());
+  };
+  const modePanel = () => {
+    const panel = $('[data-mode-panel]', screen);
+    if (draft.mode === 'photo') {
+      panel.innerHTML = `<label class="btn wide file">${icon(Camera, 18)} Tomar o elegir foto<input type="file" accept="image/*" capture="user" data-photo hidden /></label>`;
+      $('[data-photo]', panel).addEventListener('change', async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        $('[data-card-msg]', screen).textContent = 'Convirtiendo tu foto en cómic (en tu celular)…';
+        draft.photo = await comicPortrait(file, TYPE_META[draft.type].colorway);
+        $('[data-card-msg]', screen).textContent = 'Listo. La foto original no salió de tu dispositivo.';
+        save();
+        preview();
+      });
+    } else {
+      const opts: [keyof AvatarOptions, string, number][] = [
+        ['skin', 'Piel', 5],
+        ['hair', 'Cabello', 5],
+        ['accessory', 'Accesorio', 4],
+        ['mood', 'Expresión', 3],
+      ];
+      panel.innerHTML = `<div class="avatar-opts">${opts
+        .map(([k, label, n]) => `<label><span>${label}</span><input type="range" min="0" max="${n - 1}" value="${draft.avatar[k]}" data-av="${k}" /></label>`)
+        .join('')}</div><button class="btn ghost" type="button" data-random>${icon(Shuffle, 16)} Sorpréndeme</button>`;
+      panel.querySelectorAll<HTMLInputElement>('[data-av]').forEach((inp) =>
+        inp.addEventListener('input', () => {
+          (draft.avatar[inp.dataset.av as keyof AvatarOptions] as number) = Number(inp.value);
+          save();
+          preview();
+        }),
+      );
+      $('[data-random]', panel).addEventListener('click', () => {
+        draft.avatar = { ...draft.avatar, skin: rnd(5), hair: rnd(5), accessory: rnd(4), mood: rnd(3) };
+        save();
+        modePanel();
+        preview();
+      });
+    }
+  };
+  const rnd = (n: number) => Math.floor(Math.random() * n);
+
+  $('[data-f="name"]', screen).addEventListener('input', (e) => {
+    draft.name = (e.target as HTMLInputElement).value;
+    save();
+    preview();
+  });
+  $('[data-f="power"]', screen).addEventListener('change', (e) => {
+    draft.power = (e.target as HTMLSelectElement).value;
+    save();
+    preview();
+  });
+  $('[data-f="years"]', screen).addEventListener('input', (e) => {
+    draft.years = Number((e.target as HTMLInputElement).value);
+    $('[data-years]', screen).textContent = String(draft.years);
+    save();
+    preview();
+  });
+  screen.querySelectorAll<HTMLButtonElement>('[data-type]').forEach((b) =>
+    b.addEventListener('click', () => {
+      draft.type = b.dataset.type as CardType;
+      screen.querySelectorAll('[data-type]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      save();
+      preview();
+    }),
+  );
+  screen.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) =>
+    b.addEventListener('click', () => {
+      draft.mode = b.dataset.mode as Draft['mode'];
+      screen.querySelectorAll('[data-mode]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+      save();
+      modePanel();
+      preview();
+    }),
+  );
+  $('[data-close]', screen).addEventListener('click', () => go('live'));
+  $('[data-download]', screen).addEventListener('click', async () => {
+    const blob = await cardPNG(draftCard());
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'mi-card-devfest.png';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+  $('[data-publish]', screen).addEventListener('click', async () => {
+    const msg = $('[data-card-msg]', screen);
+    const c = draftCard();
+    if (c.image.length > 290_000) {
+      msg.textContent = 'La imagen es muy pesada; prueba con otra foto.';
+      return;
+    }
+    msg.textContent = 'Publicando…';
+    try {
+      await rt.publishCard({ ...c, source: 'local' });
+      card = { published: true };
+      store.set('card', card);
+      msg.textContent = '¡Listo! Tu card está en el muro (+300 pts).';
+    } catch (err) {
+      console.error(err);
+      msg.textContent = 'No se pudo publicar. Revisa tu conexión e inténtalo de nuevo.';
+    }
+  });
+  modePanel();
+  preview();
+}
+
+// ── Menú y reacciones ───────────────────────────────────────────────────
+function go(v: typeof view) {
+  view = v;
+  closeMenu();
+  render(true);
+  scrollTo({ top: 0 });
+}
+
+const menuBtn = () => $<HTMLButtonElement>('.menu-btn');
+const menuPanel = () => $('.menu-panel');
+function closeMenu() {
+  menuPanel().hidden = true;
+  menuBtn().setAttribute('aria-expanded', 'false');
+  menuBtn().setAttribute('aria-label', 'Abrir menú');
+}
+function setupMenu() {
+  const links: Record<string, string> = { slides: SLIDES_URL, demo: DEMO_URL, repo: REPO_URL };
+  document.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach((a) => (a.href = links[a.dataset.link!]));
+  menuBtn().addEventListener('click', () => {
+    const open = menuPanel().hidden;
+    menuPanel().hidden = !open;
+    menuBtn().setAttribute('aria-expanded', String(open));
+    menuBtn().setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+    if (open) menuPanel().querySelector<HTMLElement>('button, a')?.focus();
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-go]').forEach((b) => b.addEventListener('click', () => go(b.dataset.go as typeof view)));
+  addEventListener('keydown', (e) => e.key === 'Escape' && closeMenu());
+  addEventListener('pointerdown', (e) => {
+    if (!menuPanel().hidden && !menuPanel().contains(e.target as Node) && !menuBtn().contains(e.target as Node)) closeMenu();
+  });
+}
+
+function setupReactions() {
+  const bar = $('[data-reactions]');
+  bar.innerHTML = REACTIONS.map(
+    (r) => `<button type="button" data-r="${r}" aria-label="${REACTION_META[r].label}" style="--c:${REACTION_META[r].color}">${icon(REACTION_ICONS[r], 26)}</button>`,
+  ).join('');
+  let last = 0;
+  bar.addEventListener('click', async (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-r]');
+    if (!b || !rt || Date.now() - last < 900) return; // las reglas también lo limitan
+    last = Date.now();
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    b.classList.add('pop');
+    navigator.vibrate?.(15);
+    await rt.react(b.dataset.r as Reaction).catch(() => undefined);
+  });
+}
+
+void boot();

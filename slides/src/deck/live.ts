@@ -7,7 +7,7 @@
 import QRCode from 'qrcode';
 import { createElement, Brain, Check, Circle, Diamond, Flame, Hand, Heart, Lightbulb, Rocket, Square, Triangle, type IconNode } from 'lucide';
 import { cardHTML, winnerCode } from '../shared/card';
-import { REPO_URL } from '../shared/config';
+import { REPO_URL, SESSION_PARAM } from '../shared/config';
 import { getStarCount } from '../shared/github';
 import { QUESTIONS, REACTION_META, type QuestionId, type Reaction } from '../shared/questions';
 import { getRealtime, scoreFor, tally, type CardData, type LiveKind, type Player, type SlideState, type VoteRecord } from '../shared/realtime';
@@ -26,7 +26,10 @@ function icon(node: IconNode, size = 28, color?: string): SVGElement {
 
 export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   // QR (no dependen de la conexión)
-  const liveUrl = new URL('/live/', location.origin).toString();
+  const live = new URL('/live/', location.origin);
+  if (SESSION_PARAM) live.searchParams.set('session', SESSION_PARAM);
+  if (new URLSearchParams(location.search).has('local')) live.searchParams.set('local', '');
+  const liveUrl = live.toString();
   const qr = (text: string) => QRCode.toString(text, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#1e1e1e', light: '#ffffff' } });
   const [qrLive, qrRepo] = await Promise.all([qr(liveUrl), qr(REPO_URL)]);
   document.querySelectorAll('[data-qr="live"]').forEach((el) => (el.innerHTML = qrLive));
@@ -44,6 +47,12 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   };
   showBadge();
   document.querySelectorAll<HTMLElement>('[data-presenter-only]').forEach((el) => (el.hidden = rt.mode === 'local'));
+  document.querySelectorAll<HTMLElement>('[data-local-only]').forEach((el) => (el.hidden = rt.mode !== 'local'));
+  document.addEventListener('deck:reset', () => {
+    if (rt.mode !== 'local' || !confirm('¿Borrar votos, jugadores y cards de la sesión local de ensayo?')) return;
+    localStorage.removeItem('fgui.local.db');
+    location.reload();
+  });
   document.addEventListener('deck:present', async () => {
     try {
       presenter = await rt.signInPresenter();
@@ -329,7 +338,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
 
   function publishPodium() {
     if (!presenter) return;
-    void rt.patchSlide({ podium: ranking().slice(0, 10).map(({ name, score, code }) => ({ name, score, code })) as never });
+    void rt.patchSlide({ podium: ranking().slice(0, 10).map(({ name, score, code }) => ({ name, score, code })) });
   }
 
   // ── Reacciones flotantes ───────────────────────────────────────────

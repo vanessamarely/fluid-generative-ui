@@ -125,6 +125,7 @@ menu.innerHTML = `
   <button type="button" data-act="fs">Pantalla completa <kbd>F</kbd></button>
   <button type="button" data-act="rail">Panel de miniaturas <kbd>S</kbd></button>
   <button type="button" data-act="present" data-presenter-only>Presentar en vivo (GitHub)</button>
+  <button type="button" data-act="reset" data-local-only>Reiniciar sesión de ensayo</button>
   <div class="group">Ir a</div>
   <div class="slides-list"></div>`;
 
@@ -166,6 +167,7 @@ menu.addEventListener('click', (e) => {
   if (act === 'fs') toggleFullscreen();
   if (act === 'rail') toggleRail();
   if (act === 'present') document.dispatchEvent(new CustomEvent('deck:present'));
+  if (act === 'reset') document.dispatchEvent(new CustomEvent('deck:reset'));
 });
 renderMenuList();
 // El 'slidechange' inicial ocurre antes de que cargue este módulo: procesamos el slide activo.

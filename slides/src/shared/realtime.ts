@@ -31,7 +31,7 @@ export interface SlideState {
   openedAt: Partial<Record<QuestionId, number>>;
   revealed: Partial<Record<QuestionId, boolean>>;
   results: Partial<Record<QuestionId, PollResult>>;
-  podium: { name: string; score: number }[];
+  podium: { name: string; score: number; code?: string }[];
   players: number;
 }
 

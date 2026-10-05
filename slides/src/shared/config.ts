@@ -2,7 +2,9 @@ export const REPO_OWNER = 'vanessamarely';
 export const REPO_NAME = 'fluid-generative-ui';
 export const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
 
-export const SESSION_ID = import.meta.env.VITE_SESSION_ID || 'devfest-sdq-2026';
+/** ?session=ensayo1 usa una sesión aparte (ideal para ensayar sin ensuciar la de la charla). */
+export const SESSION_PARAM = new URLSearchParams(location.search).get('session');
+export const SESSION_ID = SESSION_PARAM || import.meta.env.VITE_SESSION_ID || 'devfest-sdq-2026';
 
 export const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,

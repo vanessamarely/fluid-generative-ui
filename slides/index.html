@@ -355,7 +355,8 @@
           <p class="eyebrow">// Streaming · 3 · Chrome 148+</p>
           <h2 class="title">Gemini Nano: el modelo vive <span class="hl">en el navegador</span></h2>
           <div class="grid-2" style="grid-template-columns: 1.35fr 1fr">
-            <div class="code sm">
+            <div class="stack" style="gap: 12px">
+              <div class="code sm">
               <div class="bar"><span>genui/providers.ts</span><span>Prompt API</span></div>
 <pre><span class="k">const</span> base = <span class="k">await</span> LanguageModel.<span class="f">create</span>({
   initialPrompts: [{ role: <span class="s">'system'</span>, content: SYSTEM }],
@@ -367,11 +368,12 @@
   <span class="mark">responseConstraint: ITINERARY_SCHEMA,</span> signal,
 })) <span class="k">yield</span> delta;</pre>
             </div>
+              <p class="mono small muted" style="margin: 0">Trade-offs: escritorio, descarga inicial y contexto más pequeño → plan híbrido (slide 33).</p>
+            </div>
             <div class="stack reveal">
               <div class="box green" style="--i: 0"><h3 class="ic"><i data-lucide="zap"></i> Latencia</h3><p>Sin viaje de red: el primer token llega antes.</p></div>
               <div class="box blue" style="--i: 1"><h3 class="ic"><i data-lucide="lock"></i> Privacidad</h3><p>El pedido de Lucía nunca sale del dispositivo.</p></div>
               <div class="box yellow" style="--i: 2"><h3 class="ic"><i data-lucide="wallet"></i> Costo cero</h3><p>Sin tokens facturados. Ideal para sugerencias en tiempo real.</p></div>
-              <div class="box" style="--i: 3"><h3>Trade-offs</h3><p>Escritorio, descarga inicial y contexto más pequeño → plan híbrido.</p></div>
             </div>
           </div>
         </div>
