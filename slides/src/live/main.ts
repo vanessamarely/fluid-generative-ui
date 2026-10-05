@@ -576,8 +576,6 @@ function closeMenu() {
   menuBtn().setAttribute('aria-label', 'Abrir menú');
 }
 function setupMenu() {
-  const links: Record<string, string> = { slides: SLIDES_URL, demo: DEMO_URL, repo: REPO_URL };
-  document.querySelectorAll<HTMLAnchorElement>('[data-link]').forEach((a) => (a.href = links[a.dataset.link!]));
   menuBtn().addEventListener('click', () => {
     const open = menuPanel().hidden;
     menuPanel().hidden = !open;

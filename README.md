@@ -70,10 +70,13 @@ Pasos que se hacen una vez en la consola:
 
 1. [Authentication → Comenzar](https://console.firebase.google.com/project/fluid-generative-ui/authentication) → habilitar **Anónimo**.
 2. **GitHub** (para presentar en vivo y la ⭐ automática):
-   1. En GitHub → Settings → Developer settings → **OAuth Apps → New**.
-   2. *Authorization callback URL*: `https://fluid-generative-ui.firebaseapp.com/__/auth/handler`.
+      1. En los ajustes de tu cuenta personal de GitHub, abre [Developer settings](https://github.com/settings/developers) → **OAuth Apps → New OAuth App**. También puedes llegar desde tu avatar → **Settings** → al final de la barra lateral → **Developer settings**.
+            2. En **Redirect URI**, pega `https://fluid-generative-ui.firebaseapp.com/__/auth/handler` (GitHub ahora muestra este campo en vez de “Authorization callback URL”). Deja desmarcados **Allow wildcard matching** y **Enable Device Flow**.
    3. Pega el Client ID y el Secret en Authentication → **GitHub**.
-3. Para presentar: abre el deck → menú → **Presentar en vivo (GitHub)**. Las [reglas](firestore.rules) solo aceptan el id de GitHub de la presentadora.
+3. En Authentication → Settings → **Authorized domains**, añade `fluid-generative-ui-slides.web.app` y `localhost` para ensayos locales. Esta lista de Firebase Auth es independiente de Hosting: agrega solo el hostname, sin `https://` ni rutas.
+4. Para presentar: abre `https://fluid-generative-ui-slides.web.app/?presenter=1` → menú → **Presentar en vivo (GitHub)**. El acceso solo aparece con ese enlace y las [reglas](firestore.rules) solo aceptan el id de GitHub autorizado.
+
+Comparte con el público `https://fluid-generative-ui-slides.web.app/live/`, no el enlace de presentadora. La app del público no muestra el menú del deck; las respuestas correctas solo se publican al revelar cada pregunta.
 
 Desplegar:
 

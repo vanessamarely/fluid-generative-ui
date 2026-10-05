@@ -3,7 +3,7 @@
 **Hilo narrativo**: Lucía quiere planear una escapada con IA. La v1 de *Rumbo* la desespera: el botón salta, la pantalla queda en blanco y la IA genérica la manda a un lugar peligroso. En cada bloque arreglamos un problema hasta llegar a la **v4: una web agéntica rápida, fluida, accesible y responsable**. Las 3 preguntas evalúan el término técnico de cada bloque.
 
 **Antes de empezar**
-- Deck: `https://fluid-generative-ui-slides.web.app` → menú → **Presentar en vivo (GitHub)**. Aparece el badge rojo "EN VIVO".
+- Deck de presentadora: `https://fluid-generative-ui-slides.web.app/?presenter=1` → menú → **Presentar en vivo (GitHub)**. Aparece el badge rojo "EN VIVO".
 - Pestaña 2: `https://fluid-generative-ui-demo.web.app/compare.html`. Pestaña 3: la demo con el laboratorio abierto (`?lab`).
 - DevTools abierto en la pestaña de la demo (Performance y AI assistance).
 - Plan B sin red: la demo con `?engine=mock` y los clips de los slides 9 y 32 (se reproducen solos).

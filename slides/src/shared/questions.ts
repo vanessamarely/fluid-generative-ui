@@ -42,7 +42,7 @@ export const QUESTIONS: Record<QuestionId, Question> = {
     options: [
       { id: 'a', label: 'Cuánto tarda la página en responder a un clic' },
       { id: 'b', label: 'El tiempo hasta que llega el primer token' },
-      { id: 'c', label: 'Cuánto se mueve el contenido que ya estaba en pantalla' },
+      { id: 'c', label: 'El impacto acumulado de los desplazamientos inesperados del contenido' },
       { id: 'd', label: 'Cuántos nodos DOM crea la página' },
     ],
   },
@@ -60,12 +60,12 @@ export const QUESTIONS: Record<QuestionId, Question> = {
   q3: {
     id: 'q3',
     topic: 'Agentes y estado',
-    text: 'En una web agéntica, ¿qué es el grounding?',
+    text: 'En Rumbo, ¿qué significa grounding?',
     options: [
-      { id: 'a', label: 'Conectar el modelo a internet para que busque' },
-      { id: 'b', label: 'Que el modelo solo elija datos reales de un catálogo verificado' },
-      { id: 'c', label: 'Bajar la temperatura del modelo' },
-      { id: 'd', label: 'Ejecutar el modelo en el servidor' },
+      { id: 'a', label: 'Dejar que el modelo busque cualquier lugar en internet' },
+      { id: 'b', label: 'Limitar las recomendaciones a datos de un catálogo verificado' },
+      { id: 'c', label: 'Bajar la temperatura para que la respuesta sea menos creativa' },
+      { id: 'd', label: 'Ejecutar el modelo en el servidor para validar la respuesta' },
     ],
   },
 };

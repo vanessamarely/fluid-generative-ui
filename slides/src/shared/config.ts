@@ -1,6 +1,7 @@
 export const REPO_OWNER = 'vanessamarely';
 export const REPO_NAME = 'fluid-generative-ui';
 export const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
+export const PRESENTER_GITHUB_ID = '4331491';
 
 /** ?session=ensayo1 usa una sesión aparte (ideal para ensayar sin ensuciar la de la charla). */
 export const SESSION_PARAM = new URLSearchParams(location.search).get('session');

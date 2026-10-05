@@ -27,7 +27,7 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { firebaseConfig, SESSION_ID } from './config';
+import { firebaseConfig, PRESENTER_GITHUB_ID, SESSION_ID } from './config';
 import { getFirebaseApp } from './firebase';
 import { emptySlide, type CardData, type Player, type Realtime, type SlideState, type VoteRecord, type Votes } from './realtime';
 import type { QuestionId, Reaction } from './questions';
@@ -155,7 +155,9 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
     async signInPresenter() {
       const provider = new GithubAuthProvider();
       const current = auth.currentUser;
-      if (current?.providerData.some((p) => p.providerId === 'github.com')) return true;
+      if (current?.providerData.some((p) => p.providerId === 'github.com')) {
+        return current.providerData.some((p) => p.providerId === 'github.com' && p.uid === PRESENTER_GITHUB_ID);
+      }
       try {
         if (current) await linkWithPopup(current, provider);
       } catch (err) {
@@ -168,7 +170,7 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
       return true;
     },
 
-    isPresenterSession: () => Boolean(auth.currentUser?.providerData.some((p) => p.providerId === 'github.com')),
+    isPresenterSession: () => Boolean(auth.currentUser?.providerData.some((p) => p.providerId === 'github.com' && p.uid === PRESENTER_GITHUB_ID)),
     async loadAnswers() {
       // Las reglas solo permiten leer este documento a la presentadora.
       const snap = await getDoc(doc(session, 'private', 'answers'));

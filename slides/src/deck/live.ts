@@ -38,6 +38,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   buildPolls();
 
   const rt = await getRealtime();
+  const presenterLink = new URLSearchParams(location.search).has('presenter');
   // Solo la presentadora autenticada (o ?presenter en ensayo local) controla el deck en vivo.
   let presenter = rt.isPresenterSession();
   let answers: AnswerKey = {};
@@ -48,6 +49,9 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     // Revelar y moderar SOLO existen para la presentadora: el público no ve el botón.
     document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((b) => (b.hidden = !presenter));
     document.querySelectorAll<HTMLElement>('[data-presenter-ui]').forEach((el) => (el.hidden = !presenter));
+    document.querySelectorAll<HTMLElement>('[data-presenter-only]').forEach((el) => {
+      el.hidden = rt.mode !== 'firebase' || !presenterLink || presenter;
+    });
     const missing = (['q1', 'q2', 'q3'] as QuestionId[]).filter((q) => !answers[q]);
     document.querySelectorAll<HTMLElement>('[data-answers-status]').forEach((el) => (el.textContent = missing.length ? `faltan ${missing.join(', ')}` : '3/3 cargadas'));
   };
@@ -58,8 +62,9 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   };
   syncPresenterUi();
   void loadAnswers();
-  document.querySelectorAll<HTMLElement>('[data-presenter-only]').forEach((el) => (el.hidden = rt.mode === 'local'));
-  document.querySelectorAll<HTMLElement>('[data-local-only]').forEach((el) => (el.hidden = rt.mode !== 'local'));
+  document.querySelectorAll<HTMLElement>('[data-local-only]').forEach((el) => {
+    el.hidden = rt.mode !== 'local' || !presenterLink;
+  });
   document.addEventListener('deck:reset', () => {
     if (rt.mode !== 'local' || !confirm('¿Borrar votos, jugadores y cards de la sesión local de ensayo?')) return;
     localStorage.removeItem('fgui.local.db');
@@ -69,12 +74,17 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     try {
       await rt.signInPresenter();
       presenter = rt.isPresenterSession();
+      if (!presenter) {
+        alert('Esta cuenta de GitHub no está autorizada como presentadora.');
+        syncPresenterUi();
+        return;
+      }
       await loadAnswers();
       syncPresenterUi();
       publishSlide();
     } catch (err) {
       console.error(err);
-      alert('No se pudo iniciar sesión como presentadora (¿GitHub habilitado en Firebase Auth?).');
+      alert('No se pudo iniciar sesión. Revisa que GitHub esté habilitado en Firebase Authentication y que este dominio esté autorizado.');
     }
   });
 
