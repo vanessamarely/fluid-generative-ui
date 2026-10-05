@@ -234,6 +234,15 @@ export function App() {
     [lab.engine, lab.speed, lab.verify, apply],
   );
 
+  // ?autorun: arranca solo (para grabar traces con DevTools / DevTools MCP o Playwright sin clics).
+  const autoran = useRef(false);
+  useEffect(() => {
+    if (REMOTE || autoran.current || !params.has('autorun')) return;
+    autoran.current = true;
+    const t = setTimeout(() => void run(), 600);
+    return () => clearTimeout(t);
+  }, [run]);
+
   // /compare: el padre manda los eventos; nosotros solo los aplicamos.
   useEffect(() => {
     if (!REMOTE) return;

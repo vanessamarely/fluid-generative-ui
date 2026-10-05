@@ -3,6 +3,10 @@
 import {
   ArrowUpRight,
   Play,
+  Camera,
+  CirclePlay,
+  Briefcase,
+  GitBranch,
   Brain,
   Circle,
   Clock,
@@ -28,12 +32,14 @@ import {
 } from 'lucide';
 import { DEMO_URL, REPO_URL } from '../shared/config';
 import { injectCharacters } from './characters';
+import { animateNotchLogos } from './gdg-logo';
 import { initLive } from './live';
 import { ThreeStage } from './three-stage';
 
 type DeckStage = HTMLElement & { goTo(i: number): void; next(): void; prev(): void };
 
 injectCharacters();
+void animateNotchLogos().then(() => dispatchEvent(new Event('tweakchange')));
 
 
 const stage = document.querySelector('deck-stage') as DeckStage;
@@ -46,7 +52,7 @@ sections.forEach((s, i) => {
   if (s.classList.contains('cover') && i === 0) return;
   s.insertAdjacentHTML(
     'beforeend',
-    `<div class="footer"><span>GitHub <b>vanessamarely</b> · Instagram <b>@vanessamarelycode</b></span><span>${pad(i + 1)} / ${total}</span></div>`,
+    `<div class="footer"><span>Instagram <b>@vanessamarelycode</b> · YouTube <b>vanessamarely</b> · GitHub <b>vanessamarely</b></span><span>${pad(i + 1)} / ${total}</span></div>`,
   );
 });
 
@@ -176,7 +182,7 @@ renderMenuList();
   if (first >= 0) requestAnimationFrame(() => onSlide(first, sections[first]));
 }
 createIcons({
-  icons: { ArrowUpRight, Play, Brain, Circle, Clock, CloudOff, Diamond, Hand, Heart, Lightbulb, Map: MapIcon, Rocket, ShieldCheck, Sparkles, Square, Star, Triangle, Trophy, Wallet, Zap, Lock, Flame, RotateCcw },
+  icons: { ArrowUpRight, Play, Camera, CirclePlay, Briefcase, GitBranch, Brain, Circle, Clock, CloudOff, Diamond, Hand, Heart, Lightbulb, Map: MapIcon, Rocket, ShieldCheck, Sparkles, Square, Star, Triangle, Trophy, Wallet, Zap, Lock, Flame, RotateCcw },
   attrs: { 'stroke-width': 1.75, 'aria-hidden': 'true' },
 });
 

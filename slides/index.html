@@ -79,8 +79,14 @@
                 <li>Ingeniera de Sistemas y Magíster en Ingeniería</li>
                 <li>Google Developer Expert — Web Technologies &amp; Angular</li>
                 <li>GitHub Star</li>
-                <li>Creadora de contenido · <span class="mono">@vanessamarelycode</span></li>
+                <li>Creadora de contenido</li>
               </ul>
+              <div class="socials">
+                <span class="pill"><i data-lucide="camera"></i> Instagram <b>@vanessamarelycode</b></span>
+                <span class="pill"><i data-lucide="circle-play"></i> YouTube <b>vanessamarely</b></span>
+                <span class="pill"><i data-lucide="briefcase"></i> LinkedIn <b>vanessa-marely-aristizabal-angel</b></span>
+                <span class="pill"><i data-lucide="git-branch"></i> GitHub <b>vanessamarely</b></span>
+              </div>
             </div>
           </div>
         </div>
@@ -188,7 +194,7 @@
             <div class="stack">
               <h2 class="title" style="font-size: 40px">Mismo stream.<br />Dos experiencias.</h2>
               <p class="lead" style="font-size: 22px">Fíjate en el botón, en el mapa y en el contador de nodos.</p>
-              <a class="pill blue" data-demo-link="/compare.html" target="_blank" rel="noreferrer">Abrir la demo <i data-lucide="arrow-up-right"></i></a>
+              <a class="pill dark" data-demo-link="/compare.html" target="_blank" rel="noreferrer">Abrir la demo <i data-lucide="arrow-up-right"></i></a>
             </div>
           </div>
         </div>
@@ -201,7 +207,7 @@
         <div class="frame">
           <p class="section-num">01</p>
           <h2 class="section-title">Renderizado</h2>
-          <p class="sub">Contrato primero · espacio reservado · nada salta</p>
+          <p class="sub">Contrato primero · espacio reservado · CLS ≈ 0</p>
         </div>
         <div class="section-art devfest-only"><img src="/brand/arrow-up.svg" alt="" /><img src="/brand/scallop-arches.svg" alt="" style="height: 50px" /></div>
       </section>
@@ -227,7 +233,7 @@
 };</pre>
             </div>
             <div class="stack reveal">
-              <div class="box blue" style="--i: 0"><h3>Catálogo cerrado</h3><p>Solo ids que existen: cero lugares, precios o coordenadas inventadas.</p></div>
+              <div class="box blue" style="--i: 0"><h3>Catálogo cerrado = grounding</h3><p>Solo ids que existen: cero lugares, precios o coordenadas inventadas.</p></div>
               <div class="box green" style="--i: 1"><h3>Orden pensado para streaming</h3><p>Primero lo que permite reservar espacio (región, número de días).</p></div>
               <div class="box yellow" style="--i: 2"><h3>Seguro por diseño</h3><p>Sin <code>innerHTML</code> del modelo: sin XSS y con componentes accesibles.</p></div>
             </div>
@@ -271,9 +277,8 @@
           <div class="q-head">
             <div>
               <p class="eyebrow">// Pregunta 1 de 3 · Renderizado · responde en tu celular</p>
-              <h2 class="q-text" data-q-text>¿Qué técnica evita que el contenido generado empuje lo que ya estás leyendo?</h2>
+              <h2 class="q-text" data-q-text>¿Qué mide el CLS (Cumulative Layout Shift)?</h2>
             </div>
-            <div class="countdown" data-countdown><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52" /><circle class="ring" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="0" /></svg><b>30</b></div>
           </div>
           <div class="tiles" data-poll="q1"></div>
           <p class="explain" data-explain hidden></p>
@@ -437,9 +442,8 @@ document.<span class="f">startViewTransition</span>(() =&gt; <span class="f">flu
           <div class="q-head">
             <div>
               <p class="eyebrow">// Pregunta 2 de 3 · Reutilizar el DOM</p>
-              <h2 class="q-text" data-q-text>Mismo stream: ¿por qué la v1 creó 17.913 nodos y la v2 solo 156?</h2>
+              <h2 class="q-text" data-q-text>¿Para qué sirve una key estable en una lista que se genera en streaming?</h2>
             </div>
-            <div class="countdown" data-countdown><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52" /><circle class="ring" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="0" /></svg><b>30</b></div>
           </div>
           <div class="tiles" data-poll="q2"></div>
           <p class="explain" data-explain hidden></p>
@@ -533,7 +537,7 @@ document.<span class="f">startViewTransition</span>(() =&gt; <span class="f">flu
               <svg class="who sm" style="position: absolute; left: 10px; bottom: 14px"><use href="#lucia-happy" /></svg>
             </div>
           </div>
-          <p class="comic-note">¿Qué debería hacer Rumbo? <b>Responde en tu celular →</b></p>
+          <p class="comic-note"><b>La IA propone, el código verifica, la persona decide.</b> Grounding (catálogo real) + reglas en código + bucle de corrección + confirmación humana.</p>
         </div>
       </section>
 
@@ -543,9 +547,8 @@ document.<span class="f">startViewTransition</span>(() =&gt; <span class="f">flu
           <div class="q-head">
             <div>
               <p class="eyebrow">// Pregunta 3 de 3 · Agentes y estado · ¡última oportunidad!</p>
-              <h2 class="q-text" data-q-text>La IA sugiere un hostal de $12, 2,1★ y sin licencia. ¿Qué hace una web agéntica responsable?</h2>
+              <h2 class="q-text" data-q-text>En una web agéntica, ¿qué es el grounding?</h2>
             </div>
-            <div class="countdown" data-countdown><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52" /><circle class="ring" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="0" /></svg><b>30</b></div>
           </div>
           <div class="tiles" data-poll="q3"></div>
           <p class="explain" data-explain hidden></p>
@@ -680,7 +683,7 @@ abort.current?.<span class="f">abort</span>(); <span class="k">const</span> ctrl
             <div class="stack">
               <h2 class="title" style="font-size: 40px">Agentes, verificador, panel contextual y WebMCP</h2>
               <p class="lead" style="font-size: 21px">1. "Lo más barato en Santo Domingo"<br />2. Toca un día → sugerencias<br />3. Refinar: + día de playa<br />4. Un agente llama a <span class="mono">plan_trip()</span></p>
-              <a class="pill green" data-demo-link="/" target="_blank" rel="noreferrer">Abrir Rumbo <i data-lucide="arrow-up-right"></i></a>
+              <a class="pill dark" data-demo-link="/" target="_blank" rel="noreferrer">Abrir Rumbo <i data-lucide="arrow-up-right"></i></a>
             </div>
           </div>
         </div>
@@ -762,7 +765,7 @@ generationConfig: { responseMimeType: <span class="s">'application/json'</span>,
       </section>
 
       <!-- ═════════════ 37 GRACIAS ═════════════ -->
-      <section data-label="Gracias" class="cover" data-three="orbit" data-live="end" data-tip="¡Gracias! Repo: github.com/vanessamarely/fluid-generative-ui">
+      <section data-label="Gracias" class="cover" data-three="logo" data-live="end" data-tip="¡Gracias! Repo: github.com/vanessamarely/fluid-generative-ui">
         <div class="three-slot"></div>
         <div class="frame" style="justify-content: center; pointer-events: auto">
           <p class="eyebrow">// Gracias, DevFest Santo Domingo</p>
@@ -770,9 +773,10 @@ generationConfig: { responseMimeType: <span class="s">'application/json'</span>,
           <div class="grid-2" style="grid-template-columns: auto auto; justify-content: start; gap: 24px; margin-top: 28px">
             <div class="qr-card sm"><div data-qr="repo"></div><strong>Repo</strong><span>fluid-generative-ui</span></div>
             <div class="stack" style="align-content: center">
-              <span class="pill">GitHub · <b>vanessamarely</b></span>
-              <span class="pill">Instagram · <b>@vanessamarelycode</b></span>
-              <span class="pill">YouTube · <b>vanessamarely</b></span>
+              <span class="pill"><i data-lucide="camera"></i> Instagram <b>@vanessamarelycode</b></span>
+              <span class="pill"><i data-lucide="circle-play"></i> YouTube <b>vanessamarely</b></span>
+              <span class="pill"><i data-lucide="briefcase"></i> LinkedIn <b>vanessa-marely-aristizabal-angel</b></span>
+              <span class="pill"><i data-lucide="git-branch"></i> GitHub <b>vanessamarely</b></span>
             </div>
           </div>
         </div>

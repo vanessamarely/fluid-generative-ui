@@ -173,7 +173,7 @@ function renderLobby(screen: HTMLElement) {
   screen.innerHTML = `<section class="card-sheet">
     <p class="kicker">Hola, ${esc(name)}</p>
     <h1>¡Estás dentro!</h1>
-    <p class="muted">Habrá 3 preguntas sobre lo que vamos explicando. Puntos por acertar y por rapidez.</p>
+    <p class="muted">Habrá 3 preguntas sobre los términos técnicos que vamos explicando. Puntos por acertar (y un extra por responder rápido).</p>
     <button class="big-like" type="button" aria-pressed="${liked}" data-like>${icon(Heart, 30)}<span>${liked ? '¡Gracias por el like!' : 'Dale like a la charla'}</span></button>
     <div class="star-box">
       <p><b>${icon(Star, 18)} ¿Te gusta el repo?</b> Dale una estrella en GitHub.</p>
@@ -213,7 +213,7 @@ function renderLobby(screen: HTMLElement) {
 function renderPoll(screen: HTMLElement, qid: QuestionId) {
   const q = QUESTIONS[qid];
   screen.innerHTML = `<section class="poll" data-q="${qid}">
-    <div class="poll-head"><p class="kicker">Pregunta ${qid.slice(1)} de 3 · ${esc(q.topic)}</p><span class="timer" data-timer>30</span></div>
+    <div class="poll-head"><p class="kicker">Pregunta ${qid.slice(1)} de 3 · ${esc(q.topic)}</p></div>
     <h1>${esc(q.text)}</h1>
     <div class="answers">${q.options
       .map((o, i) => `<button type="button" class="answer" data-opt="${o.id}" data-i="${i}"><span class="shape">${icon(SHAPES[i], 24)}</span><span>${esc(o.label)}</span></button>`)
@@ -230,10 +230,8 @@ function renderPoll(screen: HTMLElement, qid: QuestionId) {
   updatePoll(screen);
 }
 
-const closed = (qid: QuestionId) => {
-  const opened = slide?.openedAt?.[qid];
-  return Boolean(slide?.revealed?.[qid]) || (opened ? Date.now() - opened > (slide?.duration ?? 30) * 1000 : false);
-};
+// Sin timer: la pregunta se cierra cuando se revela en la pantalla.
+const closed = (qid: QuestionId) => Boolean(slide?.revealed?.[qid]);
 
 function updatePoll(screen: HTMLElement) {
   const qid = slide?.qid as QuestionId | undefined;
@@ -259,19 +257,6 @@ function updatePoll(screen: HTMLElement) {
     msg.innerHTML = `${icon(Send, 18)} Respuesta enviada. Mira la pantalla para el resultado.`;
   } else msg.textContent = '';
 }
-
-// Temporizador del celular: un solo intervalo, solo toca el número.
-setInterval(() => {
-  const el = document.querySelector<HTMLElement>('[data-timer]');
-  const qid = slide?.qid as QuestionId | undefined;
-  if (!el || !qid || !slide) return;
-  const opened = slide.openedAt?.[qid];
-  const left = opened ? Math.max(0, Math.ceil(slide.duration - (Date.now() - opened) / 1000)) : slide.duration;
-  if (el.textContent !== String(left)) {
-    el.textContent = String(left);
-    if (left === 0) updatePoll($('#screen'));
-  }
-}, 250);
 
 function renderContent(screen: HTMLElement) {
   const tip = slide?.tip;

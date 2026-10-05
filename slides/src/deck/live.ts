@@ -239,19 +239,8 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     if (e.key === 'v' || e.key === 'V') reveal(q);
   });
 
-  // Cuenta regresiva (un solo intervalo; solo toca el slide activo).
-  setInterval(() => {
-    const s = active();
-    const q = s.dataset.q as QuestionId | undefined;
-    const box = s.querySelector<HTMLElement>('[data-countdown]');
-    if (!q || !box || !slide) return;
-    const opened = slide.openedAt?.[q];
-    const left = opened ? Math.max(0, Math.ceil(slide.duration - (Date.now() - opened) / 1000)) : slide.duration;
-    const b = box.querySelector('b')!;
-    if (b.textContent !== String(left)) b.textContent = String(left);
-    (box.querySelector('.ring') as SVGCircleElement).style.strokeDashoffset = String(327 * (1 - left / slide.duration));
-    if (opened && left === 0 && !slide.revealed?.[q]) reveal(q);
-  }, 250);
+  // Sin cuenta regresiva visible: se revela cuando la presentadora presiona V.
+  // (La rapidez igual suma puntos: se mide con la hora del servidor de cada voto.)
 
   // ── Muro de cards (DOM por clave) ──────────────────────────────────
   const wallNodes = new Map<string, HTMLElement>();

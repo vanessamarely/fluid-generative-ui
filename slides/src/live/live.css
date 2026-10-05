@@ -62,7 +62,7 @@ main { max-width: 520px; margin: 0 auto; min-height: 60dvh; }
 .row > * { flex: 1 1 140px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 16px; border: 2px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none; font-size: 16px; font-weight: 500; cursor: pointer; }
-.btn.primary { background: var(--ht-blue); color: #1e1e1e; }
+.btn.primary { background: var(--ink); color: var(--bg); } /* tinta sobre fondo: ≈16:1 en claro y oscuro */
 .btn.ghost { background: transparent; }
 .btn.wide { width: 100%; }
 .btn:disabled { opacity: 0.5; }
@@ -80,7 +80,6 @@ main { max-width: 520px; margin: 0 auto; min-height: 60dvh; }
 
 /* Preguntas: fichas grandes tipo Kahoot (formas + colores, no solo color) */
 .poll-head { display: flex; justify-content: space-between; align-items: center; }
-.timer { min-width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--line); display: grid; place-items: center; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .answers { display: grid; gap: 10px; }
 .answer { display: grid; grid-template-columns: 48px 1fr; gap: 12px; align-items: center; min-height: 72px; padding: 10px 14px; border: 2px solid var(--line); border-radius: 18px; text-align: left; font-size: 17px; line-height: 1.25; font-weight: 500; cursor: pointer; color: #1e1e1e; transition: transform 120ms; }
 .answer:active { transform: scale(0.98); }

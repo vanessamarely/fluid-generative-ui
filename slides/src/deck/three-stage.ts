@@ -28,6 +28,8 @@ export class ThreeStage {
   private pointer = new THREE.Vector2();
   private dark = false;
   private cover = false;
+  /** el logo se ensambla desde cero cada vez que entramos al slide */
+  private logoStart = 0;
   /** Puntos del logo < > de Google Developers (muestreados del SVG) con su color. */
   private logo: { p: THREE.Vector3; color: number }[] = [];
 
@@ -146,6 +148,7 @@ export class ThreeStage {
     this.ro.observe(slot);
     this.resize();
     this.cover = !!slot.closest('.cover');
+    this.logoStart = this.clock.elapsedTime;
     this.tokens.count = mode === 'logo' ? COUNT : SMALL;
     this.panels.visible = mode !== 'logo';
     this.applyLogoColors();
@@ -203,7 +206,7 @@ export class ThreeStage {
       const d = this.data[i];
       const target = this.logo[i].p;
       // cada partícula llega con un pequeño retraso propio
-      const local = settle ? 4 : (time + d.lane * 0.25) % CYCLE;
+      const local = settle ? 4 : (time - this.logoStart + d.lane * 0.25) % CYCLE;
       from.set(target.x * 0.6 + d.y0 * 1.6, -6.5 - d.z0 * 2, d.z0 * 3);
       let e: number;
       if (local < 3.2) e = 1 - Math.pow(1 - local / 3.2, 3); // ensamblar

@@ -156,7 +156,8 @@ export function scoreFor(
     const opened = slide.openedAt[q];
     const at = vote.at[q];
     if (opened && at) {
-      const ratio = 1 - (at - opened) / (slide.duration * 1000);
+      // Bono por rapidez (sin timer visible): máximo al instante, 0 a los 60 s.
+      const ratio = 1 - (at - opened) / (Math.max(slide.duration, 60) * 1000);
       score += Math.round(500 * Math.min(1, Math.max(0, ratio)));
     }
   }

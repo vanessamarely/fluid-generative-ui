@@ -5,3 +5,4 @@ dist
 .firebase
 *.log
 .DS_Store
+docs/traces/

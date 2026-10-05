@@ -2,11 +2,17 @@
   "name": "fluid-generative-ui",
   "private": true,
   "description": "IA rápida, UI fluida — slides interactivos (slides/) y demo de UI generativa en React con Gemini Nano (demo/)",
-  "workspaces": ["slides", "demo"],
+  "workspaces": [
+    "slides",
+    "demo"
+  ],
   "scripts": {
     "dev:slides": "npm run dev -w slides",
     "dev:demo": "npm run dev -w demo",
     "build": "npm run build -w slides && npm run build -w demo",
     "deploy": "npm run build && firebase deploy"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
