@@ -343,3 +343,4 @@ main { padding: 0 clamp(20px, 5vw, 48px) 120px; max-width: 1440px; margin: 0 aut
 .rumbo[data-embed] .lab .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .rumbo[data-embed] .lab .metric dd { font-size: 14px; }
 .rumbo[data-embed] main { padding-bottom: 140px; }
+.lodging-card:has(.badge) .lodging-head { padding-right: 104px; }

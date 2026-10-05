@@ -1,0 +1,57 @@
+{
+  "title": "Rumbo · el verificador atrapa la trampa",
+  "steps": [
+    {
+      "type": "setViewport",
+      "width": 1280,
+      "height": 720,
+      "deviceScaleFactor": 1,
+      "isMobile": false,
+      "hasTouch": false,
+      "isLandscape": true
+    },
+    {
+      "type": "navigate",
+      "url": "http://localhost:5174/?engine=mock&speed=70&q=Lo%20m%C3%A1s%20barato%20posible%20en%20Santo%20Domingo%2C%20historia%20y%20comida",
+      "assertedEvents": [
+        {
+          "type": "navigation",
+          "url": "http://localhost:5174/?engine=mock&speed=70&q=Lo%20m%C3%A1s%20barato%20posible%20en%20Santo%20Domingo%2C%20historia%20y%20comida",
+          "title": "Rumbo · escapadas con IA"
+        }
+      ]
+    },
+    {
+      "type": "click",
+      "target": "main",
+      "selectors": [
+        [
+          "aria/Planificar con IA"
+        ],
+        [
+          ".hero-cta"
+        ]
+      ],
+      "offsetX": 12,
+      "offsetY": 12
+    },
+    {
+      "type": "waitForElement",
+      "selectors": [
+        [
+          ".lodging-card[data-blocked]"
+        ]
+      ],
+      "timeout": 30000
+    },
+    {
+      "type": "waitForElement",
+      "selectors": [
+        [
+          ".checks li[data-level='fixed']"
+        ]
+      ],
+      "timeout": 30000
+    }
+  ]
+}

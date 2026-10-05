@@ -1,0 +1,80 @@
+{
+  "title": "Rumbo · refinar sin empezar de cero (reutiliza el DOM)",
+  "steps": [
+    {
+      "type": "setViewport",
+      "width": 1280,
+      "height": 720,
+      "deviceScaleFactor": 1,
+      "isMobile": false,
+      "hasTouch": false,
+      "isLandscape": true
+    },
+    {
+      "type": "navigate",
+      "url": "http://localhost:5174/?engine=mock&speed=90&q=Playa%20y%20naturaleza%20en%20Saman%C3%A1%2C%20algo%20tranquilo",
+      "assertedEvents": [
+        {
+          "type": "navigation",
+          "url": "http://localhost:5174/?engine=mock&speed=90&q=Playa%20y%20naturaleza%20en%20Saman%C3%A1%2C%20algo%20tranquilo",
+          "title": "Rumbo · escapadas con IA"
+        }
+      ]
+    },
+    {
+      "type": "click",
+      "target": "main",
+      "selectors": [
+        [
+          "aria/Planificar con IA"
+        ],
+        [
+          ".hero-cta"
+        ]
+      ],
+      "offsetX": 12,
+      "offsetY": 12
+    },
+    {
+      "type": "waitForElement",
+      "selectors": [
+        [
+          ".wf-node[data-status='done']:nth-of-type(1)"
+        ]
+      ],
+      "timeout": 30000
+    },
+    {
+      "type": "waitForElement",
+      "selectors": [
+        [
+          ".refine .chip"
+        ]
+      ],
+      "timeout": 30000
+    },
+    {
+      "type": "click",
+      "target": "main",
+      "selectors": [
+        [
+          "aria/Agrega un día de playa"
+        ],
+        [
+          ".refine .chip:nth-of-type(2)"
+        ]
+      ],
+      "offsetX": 12,
+      "offsetY": 12
+    },
+    {
+      "type": "waitForElement",
+      "selectors": [
+        [
+          ".day-slot:nth-child(4) .day-card:not(.skeleton)"
+        ]
+      ],
+      "timeout": 30000
+    }
+  ]
+}

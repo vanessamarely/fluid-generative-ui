@@ -1,0 +1,102 @@
+# IA rápida, UI fluida
+
+Charla técnica para **DevFest Santo Domingo 2026** (track Web) de [Vanessa Aristizabal](https://github.com/vanessamarely).
+
+> Las interfaces generadas dinámicamente por IA permiten crear experiencias personalizadas, pero también pueden provocar cambios inesperados de layout, alta carga en el cliente y retrasos en el renderizado. En esta sesión exploramos cómo optimizar una UI generativa mediante estrategias de renderizado, streaming, reutilización del DOM y manejo eficiente del estado, manteniendo experiencias rápidas, fluidas y accesibles.
+
+Este repo tiene **dos apps independientes**:
+
+| Carpeta | Qué es | URL |
+|---|---|---|
+| [`slides/`](slides) | **Deck interactivo** (37 slides) + **app del público** en `/live/`: apodos, 3 preguntas tipo Kahoot, likes, ⭐, reacciones, cards con tu foto estilo cómic y podio con código de ganador. | https://fluid-generative-ui-slides.web.app |
+| [`demo/`](demo) | **Rumbo**: planificador de escapadas por República Dominicana. Una web agéntica con UI generativa en streaming, en React. | https://fluid-generative-ui-demo.web.app |
+
+## Rumbo: la demo
+
+```
+Intención (Gemini Nano)  →  Itinerario ∥ Hospedaje (streaming en paralelo)  →  Verificador ↺  →  Síntesis
+      secuencial                         paralelo                         secuencial + bucle     presupuesto en código
+```
+
+- **Renderizado**: catálogo de componentes + JSON Schema (el modelo devuelve datos, no HTML) y slots con la altura final (CLS ≈ 0).
+- **Streaming**: [parser JSON incremental](demo/src/genui/json-stream.ts) O(n), un render por frame ([`DocStore`](demo/src/genui/doc-store.ts)) y `scheduler.yield()`.
+- **Reutilización del DOM**: claves estables por id, suscripción por ítem (`useSyncExternalStore`), View Transitions y un mapa de Leaflet que nunca se recrea.
+- **Estado**: un store por agente (borrador vs. confirmado, lo anterior visible hasta su reemplazo) y presupuesto **derivado en código**.
+- **Accesibilidad**: `aria-busy` por región, anuncios cortos y espaciados, el foco nunca se mueve solo y respeta `prefers-reduced-motion`.
+- **Agentes responsables**: grounding (catálogo real), [verificador](demo/src/trip/verify.ts) con reglas en código (seguridad, precio anómalo, temporada, días imposibles) y bucle de corrección. Incluye una trampa: *"Habitaciones La Ganga"*, $12 y 2,1★.
+- **WebMCP**: 6 tools con `document.modelContext.registerTool()` (con polyfill) y confirmación humana para acciones sensibles.
+- **APIs de IA integradas**: Prompt API (Gemini Nano), Summarizer, Translator y Rewriter, en el [panel contextual](demo/src/ui/ContextPanel.tsx).
+- **DevTools**: los agentes aparecen como pistas propias en el panel **Performance** ([`perf-tracks.ts`](demo/src/genui/perf-tracks.ts)).
+- **`/compare.html`**: el mismo stream enviado a dos iframes, **v1 ingenua vs. v2 fluida**, con métricas reales (CLS, nodos creados, reutilizados, long tasks).
+
+**Motor de IA**: local primero, nube de respaldo.
+1. **Gemini Nano** (Prompt API, estable desde Chrome 148). Gratis, privado y sin red.
+2. **Gemini API** (`gemini-3.5-flash-lite`) con una key de Google AI Studio, si el equipo no tiene Nano.
+3. **Simulado** determinista: plan B sin wifi y base de `/compare`.
+
+## Correr en local
+
+```bash
+npm install
+```
+
+```bash
+npm run dev:demo
+```
+
+```bash
+npm run dev:slides
+```
+
+- Demo: http://localhost:5174 · comparación: http://localhost:5174/compare.html · laboratorio de métricas: tecla **D**.
+- Deck: http://localhost:5173 · app del público: http://localhost:5173/live/
+- **Ensayo sin internet**: agrega `?local` al deck y a `/live/`. Cada pestaña es un asistente y se comunican por `BroadcastChannel`.
+- **Ensayo con Firestore sin ensuciar la sesión real**: `?session=ensayo1` (el QR lo incluye).
+
+Atajos del deck: `←/→` navegar · **V** revelar respuesta · **L** claro/oscuro · **F** pantalla completa · **S** miniaturas · **M** menú.
+
+### Variables de entorno
+
+Copia [`.env.example`](.env.example) a `slides/.env.local` y `demo/.env.local`:
+
+- `slides/.env.local`: config web de Firebase (ya generada con la CLI para el proyecto `fluid-generative-ui`).
+- `demo/.env.local`: `VITE_GEMINI_API_KEY` de Google AI Studio. **Restríngela** en Google Cloud Console: solo *Generative Language API* y solo los referrers `http://localhost:5174/*` y `https://fluid-generative-ui-demo.web.app/*`.
+
+## Firebase (plan Spark, $0)
+
+Proyecto `fluid-generative-ui`: Hosting (2 sitios), Firestore y Auth. El público entra con **Auth anónima**. Solo el deck escucha las colecciones y publica agregados, así que cientos de celulares leen un único documento.
+
+Pasos que se hacen una vez en la consola:
+
+1. [Authentication → Comenzar](https://console.firebase.google.com/project/fluid-generative-ui/authentication) → habilitar **Anónimo**.
+2. **GitHub** (para presentar en vivo y la ⭐ automática):
+   1. En GitHub → Settings → Developer settings → **OAuth Apps → New**.
+   2. *Authorization callback URL*: `https://fluid-generative-ui.firebaseapp.com/__/auth/handler`.
+   3. Pega el Client ID y el Secret en Authentication → **GitHub**.
+3. Para presentar: abre el deck → menú → **Presentar en vivo (GitHub)**. Las [reglas](firestore.rules) solo aceptan el id de GitHub de la presentadora.
+
+Desplegar:
+
+```bash
+npm run deploy
+```
+
+## Clips y traces para los slides
+
+```bash
+node scripts/record-clips.mjs
+```
+
+[`scripts/record-clips.mjs`](scripts/record-clips.mjs) usa Playwright con tu Chrome (sin descargar navegadores) para grabar clips `.webm` en `slides/public/clips/` (también son el plan B en el escenario). Además genera `docs/traces/rumbo-{naive,fluid}.json`: arrástralos a **DevTools → Performance** para ver las pistas *Rumbo · agentes*, los layout shifts y las long tasks.
+
+En [`docs/recorder/`](docs/recorder) hay flujos para **DevTools → Recorder** (Import → Replay o *Measure performance*).
+
+## Guion
+
+El guion completo con tiempos está en [docs/GUION.md](docs/GUION.md).
+
+## Créditos
+
+- Diseño claro: guía [DevFest Santo Domingo 2026](https://design-systems.venture.do/devfest-santo-domingo/DESIGN.md). Estructura del deck y `deck-stage` de [webmcp-action](https://github.com/vanessamarely/webmcp-action).
+- Íconos: [Lucide](https://lucide.dev) (ISC). Mapa: © [OpenStreetMap](https://www.openstreetmap.org/copyright) con [Leaflet](https://leafletjs.com).
+- En Rumbo los **hospedajes son ficticios**; los lugares son reales y sus coordenadas, aproximadas.
