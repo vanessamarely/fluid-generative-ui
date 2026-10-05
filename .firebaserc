@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "fluid-generative-ui"
+  },
+  "targets": {
+    "fluid-generative-ui": {
+      "hosting": {
+        "slides": [
+          "fluid-generative-ui-slides"
+        ],
+        "demo": [
+          "fluid-generative-ui-demo"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

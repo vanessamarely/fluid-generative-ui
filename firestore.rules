@@ -1,0 +1,102 @@
+rules_version = '2';
+
+// Modelo de datos (una sesión por charla):
+//   sessions/{sid}                 ← slide actual, preguntas abiertas, resultados y podio. Solo la presentadora escribe.
+//   sessions/{sid}/players/{uid}   ← apodo (generado, no texto libre) para el podio
+//   sessions/{sid}/likes/{uid}     ← 1 like por persona (idempotente)
+//   sessions/{sid}/votes/{uid}     ← { q1, q1At, q2, q2At, q3, q3At } — qNAt = hora del servidor (puntaje justo)
+//   sessions/{sid}/reactions/{uid} ← último emoji enviado (limitado a 1 cada ~0.8 s)
+//   sessions/{sid}/cards/{uid}     ← card/avatar de cada asistente
+//
+// Todo el público entra con Auth anónima: no pedimos datos personales.
+// Login con GitHub es opcional y solo se usa para dar ⭐ al repo.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cambia este id por el de quien presenta (GET https://api.github.com/users/<login> → "id").
+    function isPresenter() {
+      return request.auth != null
+        && request.auth.token.firebase.identities.keys().hasAny(['github.com'])
+        && request.auth.token.firebase.identities['github.com'][0] == '4331491';
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function onlyKeys(allowed) {
+      return request.resource.data.keys().hasOnly(allowed);
+    }
+
+    match /sessions/{sid} {
+      allow read: if true;
+      allow write: if isPresenter();
+
+      match /likes/{uid} {
+        allow read: if true;
+        allow create, update: if isOwner(uid) && onlyKeys(['at']);
+        allow delete: if isOwner(uid);
+      }
+
+      match /players/{uid} {
+        allow read: if true;
+        allow create, update: if isOwner(uid) && onlyKeys(['name', 'at'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 32;
+      }
+
+      match /votes/{uid} {
+        allow read: if true;
+        allow create, update: if isOwner(uid)
+          && onlyKeys(['q1', 'q1At', 'q2', 'q2At', 'q3', 'q3At'])
+          && validAnswer('q1', ['a', 'b', 'c', 'd'])
+          && validAnswer('q2', ['naive', 'fluid'])
+          && validAnswer('q3', ['a', 'b', 'c', 'd']);
+      }
+
+      // Opción válida y, si la respuesta cambió, su timestamp debe ser la hora del servidor.
+      function validAnswer(q, options) {
+        let d = request.resource.data;
+        let before = resource == null ? {} : resource.data;
+        return !(q in d) || (
+          d[q] in options
+          && (q + 'At') in d
+          && (d[q + 'At'] == request.time || (q in before && before[q] == d[q] && before[q + 'At'] == d[q + 'At']))
+        );
+      }
+
+      match /reactions/{uid} {
+        allow read: if true;
+        allow create: if isOwner(uid) && onlyKeys(['emoji', 'at', 'n'])
+          && request.resource.data.emoji in ['🔥', '👏', '🤯', '💡', '❤️', '🚀'];
+        allow update: if isOwner(uid) && onlyKeys(['emoji', 'at', 'n'])
+          && request.resource.data.emoji in ['🔥', '👏', '🤯', '💡', '❤️', '🚀']
+          && request.time > resource.data.at + duration.value(800, 'ms');
+      }
+
+      match /cards/{uid} {
+        allow read: if true;
+        allow create: if isOwner(uid) && validCard() && request.resource.data.hidden == false;
+        allow update: if (isOwner(uid) && validCard() && request.resource.data.hidden == resource.data.hidden)
+          || (isPresenter() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['hidden']));
+        allow delete: if isOwner(uid) || isPresenter();
+      }
+
+      function validCard() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['name', 'type', 'power', 'years', 'image', 'ability', 'source', 'createdAt', 'hidden'])
+          && d.name is string && d.name.size() > 0 && d.name.size() <= 24
+          && d.type in ['web', 'ia', 'cloud', 'mobile']
+          && d.power is string && d.power.size() <= 24
+          && d.years is int && d.years >= 0 && d.years <= 60
+          && d.ability is string && d.ability.size() <= 140
+          && d.source in ['gemini', 'local']
+          && d.image is string && d.image.size() <= 300000;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

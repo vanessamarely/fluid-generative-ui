@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "demo", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "-w", "demo"], "port": 5174 },
+    { "name": "slides", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "-w", "slides"], "port": 5173 }
+  ]
+}

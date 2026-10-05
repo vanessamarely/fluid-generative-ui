@@ -1,0 +1,135 @@
+/* Tokens compartidos por slides, app del público y demo.
+   Claro  = guía DevFest Santo Domingo 2026 (Google Sans + Roboto Mono, línea 2px #1e1e1e, pasteles).
+   Oscuro = estética neón de "WebMCP en acción" (Space Grotesk + JetBrains Mono, cian/magenta). */
+
+:root {
+  color-scheme: light;
+  --bg: #f0f0f0;
+  --surface: #ffffff;
+  --surface-2: #f7f7f7;
+  --ink: #1e1e1e;
+  --ink-dim: #4b4b4b;
+  --line: #1e1e1e;
+  --line-w: 2px;
+  --line-soft: rgba(30, 30, 30, 0.18);
+
+  --blue: #4285f4;
+  --green: #34a853;
+  --yellow: #f9ab00;
+  --red: #ea4335;
+  --ht-blue: #57caff;
+  --ht-green: #5cdb6d;
+  --ht-yellow: #ffd427;
+  --ht-red: #ff7daf;
+  --pastel-blue: #c3ecf6;
+  --pastel-green: #ccf6c5;
+  --pastel-yellow: #ffe7a5;
+  --pastel-red: #f8d8d8;
+
+  /* roles */
+  --accent: var(--blue);
+  --accent-ink: var(--ink);
+  --accent-2: var(--red);
+  --good: var(--green);
+  --bad: var(--red);
+  --focus: var(--blue);
+  --chip-ink: var(--ink);
+
+  --radius-card: 28px;
+  --radius-md: 18px;
+  --radius-sm: 12px;
+  --radius-pill: 9999px;
+  --glow: none;
+
+  --font-sans: "Google Sans", "Google Sans Text", system-ui, sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, monospace;
+  --mono-weight: 300;
+  --title-weight: 700;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #020617;
+  --surface: rgba(7, 14, 32, 0.95);
+  --surface-2: rgba(15, 25, 50, 0.9);
+  --ink: #e6f6ff;
+  --ink-dim: #b8c7d9;
+  --line: rgba(0, 242, 255, 0.45);
+  --line-w: 1px;
+  --line-soft: rgba(0, 242, 255, 0.18);
+
+  --blue: #00f2ff;
+  --green: #62df9d;
+  --yellow: #ffd166;
+  --red: #ff2d6f;
+  --ht-blue: #00f2ff;
+  --ht-green: #62df9d;
+  --ht-yellow: #ffd166;
+  --ht-red: #ff5c9a;
+  --pastel-blue: rgba(0, 242, 255, 0.12);
+  --pastel-green: rgba(98, 223, 157, 0.13);
+  --pastel-yellow: rgba(255, 209, 102, 0.13);
+  --pastel-red: rgba(255, 45, 111, 0.14);
+
+  --accent: #00f2ff;
+  --accent-ink: #020617;
+  --accent-2: #bd00ff;
+  --chip-ink: #020617;
+
+  --radius-card: 6px;
+  --radius-md: 6px;
+  --radius-sm: 4px;
+  --glow: 0 0 24px rgba(0, 242, 255, 0.12);
+
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --mono-weight: 500;
+  --title-weight: 700;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-weight: var(--mono-weight);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
