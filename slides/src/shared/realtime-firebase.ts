@@ -17,6 +17,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getFirestore,
   limit,
   onSnapshot,
@@ -165,6 +166,16 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
       }
       await auth.currentUser?.getIdToken(true);
       return true;
+    },
+
+    isPresenterSession: () => Boolean(auth.currentUser?.providerData.some((p) => p.providerId === 'github.com')),
+    async loadAnswers() {
+      // Las reglas solo permiten leer este documento a la presentadora.
+      const snap = await getDoc(doc(session, 'private', 'answers'));
+      return snap.exists() ? (snap.data() as never) : null;
+    },
+    async saveAnswers(a) {
+      await setDoc(doc(session, 'private', 'answers'), a);
     },
 
     async githubTokenForStar() {

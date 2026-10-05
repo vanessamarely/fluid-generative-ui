@@ -2,6 +2,7 @@ rules_version = '2';
 
 // Modelo de datos (una sesión por charla):
 //   sessions/{sid}                 ← slide actual, preguntas abiertas, resultados y podio. Solo la presentadora escribe.
+//   sessions/{sid}/private/answers ← respuestas correctas: SOLO la presentadora lee y escribe
 //   sessions/{sid}/players/{uid}   ← apodo (generado, no texto libre) para el podio
 //   sessions/{sid}/likes/{uid}     ← 1 like por persona (idempotente)
 //   sessions/{sid}/votes/{uid}     ← { q1, q1At, … } — qNAt = hora del servidor (puntaje justo y no editable)
@@ -31,6 +32,11 @@ service cloud.firestore {
     match /sessions/{sid} {
       allow read: if true;
       allow write: if isPresenter();
+
+      // Respuestas correctas: privadas. Nadie del público puede leerlas (ni con DevTools).
+      match /private/{docId} {
+        allow read, write: if isPresenter();
+      }
 
       match /likes/{uid} {
         allow read: if true;

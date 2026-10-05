@@ -117,6 +117,18 @@ export function createLocalRealtime(): Realtime {
     async signInPresenter() {
       return true;
     },
+    // En ensayo local "presentadora" = quien abre el deck con ?presenter.
+    isPresenterSession: () => new URLSearchParams(location.search).has('presenter'),
+    async loadAnswers() {
+      try {
+        return JSON.parse(localStorage.getItem('fgui.local.private') ?? 'null');
+      } catch {
+        return null;
+      }
+    },
+    async saveAnswers(a) {
+      localStorage.setItem('fgui.local.private', JSON.stringify(a));
+    },
     async githubTokenForStar() {
       return null;
     },

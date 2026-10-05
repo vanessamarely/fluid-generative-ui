@@ -9,7 +9,7 @@ import { createElement, Brain, Check, Circle, Diamond, Flame, Hand, Heart, Light
 import { cardHTML, winnerCode } from '../shared/card';
 import { REPO_URL, SESSION_PARAM } from '../shared/config';
 import { getStarCount } from '../shared/github';
-import { QUESTIONS, REACTION_META, type QuestionId, type Reaction } from '../shared/questions';
+import { QUESTIONS, REACTION_META, parseAnswerKey, type AnswerKey, type QuestionId, type Reaction } from '../shared/questions';
 import { getRealtime, scoreFor, tally, type CardData, type LiveKind, type Player, type SlideState, type VoteRecord } from '../shared/realtime';
 
 const SHAPES: IconNode[] = [Triangle, Diamond, Circle, Square];
@@ -38,14 +38,26 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   buildPolls();
 
   const rt = await getRealtime();
-  const params = new URLSearchParams(location.search);
-  let presenter = rt.mode === 'local' || params.has('presenter-local');
+  // Solo la presentadora autenticada (o ?presenter en ensayo local) controla el deck en vivo.
+  let presenter = rt.isPresenterSession();
+  let answers: AnswerKey = {};
   const badge = document.querySelector<HTMLElement>('.presenter-badge')!;
-  const showBadge = () => {
+  const syncPresenterUi = () => {
     badge.hidden = !presenter;
-    badge.textContent = rt.mode === 'local' ? '● EN VIVO · modo local' : '● EN VIVO';
+    badge.textContent = rt.mode === 'local' ? '● EN VIVO · ensayo local' : '● EN VIVO';
+    // Revelar y moderar SOLO existen para la presentadora: el público no ve el botón.
+    document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((b) => (b.hidden = !presenter));
+    document.querySelectorAll<HTMLElement>('[data-presenter-ui]').forEach((el) => (el.hidden = !presenter));
+    const missing = (['q1', 'q2', 'q3'] as QuestionId[]).filter((q) => !answers[q]);
+    document.querySelectorAll<HTMLElement>('[data-answers-status]').forEach((el) => (el.textContent = missing.length ? `faltan ${missing.join(', ')}` : '3/3 cargadas'));
   };
-  showBadge();
+  const loadAnswers = async () => {
+    if (!presenter) return;
+    answers = (await rt.loadAnswers().catch(() => null)) ?? {};
+    syncPresenterUi();
+  };
+  syncPresenterUi();
+  void loadAnswers();
   document.querySelectorAll<HTMLElement>('[data-presenter-only]').forEach((el) => (el.hidden = rt.mode === 'local'));
   document.querySelectorAll<HTMLElement>('[data-local-only]').forEach((el) => (el.hidden = rt.mode !== 'local'));
   document.addEventListener('deck:reset', () => {
@@ -55,13 +67,35 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   });
   document.addEventListener('deck:present', async () => {
     try {
-      presenter = await rt.signInPresenter();
-      showBadge();
+      await rt.signInPresenter();
+      presenter = rt.isPresenterSession();
+      await loadAnswers();
+      syncPresenterUi();
       publishSlide();
     } catch (err) {
       console.error(err);
       alert('No se pudo iniciar sesión como presentadora (¿GitHub habilitado en Firebase Auth?).');
     }
+  });
+
+  // Cargar respuestas desde un answers.json LOCAL (no está en el repo ni en el bundle).
+  document.addEventListener('deck:answers', () => {
+    if (!presenter) return;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.addEventListener('change', async () => {
+      try {
+        const parsed = parseAnswerKey(JSON.parse(await input.files![0].text()));
+        await rt.saveAnswers(parsed);
+        answers = parsed;
+        syncPresenterUi();
+        alert(`Respuestas guardadas en privado: ${Object.keys(parsed).join(', ')}`);
+      } catch (err) {
+        alert(`No pude leer el archivo: ${(err as Error).message}`);
+      }
+    });
+    input.click();
   });
 
   // ── Estado agregado (solo el deck lo escucha) ──────────────────────
@@ -187,13 +221,11 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
         tile.innerHTML = `<span class="bar"></span><span class="shape"></span><span class="label"></span><span class="count">0</span>`;
         tile.querySelector('.shape')!.append(icon(SHAPES[i], 26));
         tile.querySelector('.label')!.textContent = opt.label;
-        if (opt.id === q.correct) {
-          tile.dataset.correct = '';
-          const ok = document.createElement('span');
-          ok.className = 'ok';
-          ok.append(icon(Check, 22));
-          tile.append(ok);
-        }
+        // La marca de "correcta" se activa SOLO al revelar (la respuesta no está en el DOM antes).
+        const ok = document.createElement('span');
+        ok.className = 'ok';
+        ok.append(icon(Check, 22));
+        tile.append(ok);
         box.append(tile);
       });
     });
@@ -208,12 +240,14 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
       const max = Math.max(1, ...Object.values(counts));
       section.toggleAttribute('data-revealed', revealed);
       section.querySelectorAll<HTMLElement>('[data-total]').forEach((el) => (el.textContent = String(total)));
+      const published = revealed ? slide?.answers?.[q] : undefined;
       const explain = section.querySelector<HTMLElement>('[data-explain]');
       if (explain) {
-        explain.hidden = !revealed;
-        explain.textContent = QUESTIONS[q].explain;
+        explain.hidden = !published;
+        explain.textContent = published?.explain ?? '';
       }
       box.querySelectorAll<HTMLElement>('.tile').forEach((tile) => {
+        tile.toggleAttribute('data-correct', Boolean(published && tile.dataset.opt === published.correct));
         const n = counts[tile.dataset.opt!] ?? 0;
         tile.querySelector('.count')!.textContent = String(n);
         // transform (no width): la barra crece sin provocar layout.
@@ -224,19 +258,27 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   }
 
   const reveal = (q: QuestionId) => {
-    if (!presenter || !slide) return;
-    void rt.patchSlide({ revealed: { ...slide.revealed, [q]: true }, results: { ...slide.results, [q]: tally(votes, q) } });
+    if (!presenter || !slide) return; // el público no puede revelar (y las reglas tampoco lo dejarían)
+    if (!answers[q]) {
+      alert(`Primero carga las respuestas: menú → "Cargar respuestas" (falta ${q}).`);
+      return;
+    }
+    // Se publica SOLO la respuesta de esta pregunta, en el momento de revelar.
+    void rt.patchSlide({
+      revealed: { ...slide.revealed, [q]: true },
+      results: { ...slide.results, [q]: tally(votes, q) },
+      answers: { ...slide.answers, [q]: answers[q] },
+    });
   };
   sections.forEach((s) => {
     const q = s.dataset.q as QuestionId | undefined;
     if (!q) return;
     s.querySelector('[data-reveal]')?.addEventListener('click', () => reveal(q));
-    s.querySelectorAll<HTMLElement>('.q-foot button').forEach((b) => (b.hidden = !presenter && rt.mode !== 'local'));
   });
   addEventListener('keydown', (e) => {
     const q = active().dataset.q as QuestionId | undefined;
     if (!q || (e.target instanceof HTMLElement && /INPUT|TEXTAREA/.test(e.target.tagName))) return;
-    if (e.key === 'v' || e.key === 'V') reveal(q);
+    if ((e.key === 'v' || e.key === 'V') && presenter) reveal(q);
   });
 
   // Sin cuenta regresiva visible: se revela cuando la presentadora presiona V.
@@ -290,7 +332,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
         return {
           uid,
           name: names.get(uid) ?? cards.find((c) => c.id === uid)?.name ?? 'Anónimo',
-          score: scoreFor(v, slide ?? { openedAt: {}, duration: 30 }, likes.has(uid), hasCard.has(uid)),
+          score: scoreFor(v, slide ?? { openedAt: {}, duration: 30 }, likes.has(uid), hasCard.has(uid), answers),
           speed,
           code: winnerCode(uid),
         };
@@ -302,7 +344,9 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   function renderPodium() {
     const box = document.querySelector<HTMLElement>('[data-podium]');
     if (!box) return;
-    const top = ranking();
+    // Solo la presentadora tiene las respuestas: el resto ve el podio que ella publica.
+    const top = presenter ? ranking() : (slide?.podium ?? []).map((p) => ({ ...p, uid: '', speed: 0, code: p.code ?? '' }));
+    if (presenter && kindOf(active()) === 'podium') schedulePodiumPublish();
     const medal = ['2°', '1°', '3°'];
     const order = [top[1], top[0], top[2]];
     box.innerHTML = order
@@ -323,6 +367,12 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
         rest.append(pill);
       });
     }
+  }
+
+  let podiumTimer = 0;
+  function schedulePodiumPublish() {
+    clearTimeout(podiumTimer);
+    podiumTimer = window.setTimeout(publishPodium, 1500);
   }
 
   function publishPodium() {

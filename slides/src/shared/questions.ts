@@ -1,4 +1,5 @@
-// Las 3 preguntas (estilo Kahoot) sobre lo que se acaba de explicar.
+// Las 3 preguntas (estilo Kahoot) sobre los términos técnicos que se acaban de explicar.
+// Aquí solo van el texto y las opciones: las respuestas son privadas (ver AnswerKey).
 // Cada una va en su propio slide, justo después de su bloque de la charla.
 
 export type QuestionId = 'q1' | 'q2' | 'q3';
@@ -8,10 +9,29 @@ export interface Question {
   /** bloque de la charla que evalúa */
   topic: string;
   text: string;
-  options: { id: 'a' | 'b' | 'c' | 'd'; label: string }[];
-  correct: 'a' | 'b' | 'c' | 'd';
-  /** una línea que se muestra al revelar */
-  explain: string;
+  options: { id: OptionId; label: string }[];
+}
+
+export type OptionId = 'a' | 'b' | 'c' | 'd';
+
+/**
+ * Respuestas correctas: NO viven en el código (el bundle es público y alguien podría
+ * leerlas con DevTools). Están en Firestore en un documento que solo la presentadora
+ * puede leer; al revelar, el deck publica únicamente la respuesta de esa pregunta.
+ */
+export type AnswerKey = Partial<Record<QuestionId, { correct: OptionId; explain: string }>>;
+
+export function parseAnswerKey(raw: unknown): AnswerKey {
+  const out: AnswerKey = {};
+  if (!raw || typeof raw !== 'object') throw new Error('El archivo no es un JSON de respuestas');
+  for (const q of ['q1', 'q2', 'q3'] as QuestionId[]) {
+    const a = (raw as Record<string, { correct?: string; explain?: string }>)[q];
+    if (!a) continue;
+    if (!['a', 'b', 'c', 'd'].includes(a.correct ?? '')) throw new Error(`${q}: "correct" debe ser a, b, c o d`);
+    out[q] = { correct: a.correct as OptionId, explain: String(a.explain ?? '').slice(0, 400) };
+  }
+  if (!Object.keys(out).length) throw new Error('No encontré q1, q2 ni q3');
+  return out;
 }
 
 export const QUESTIONS: Record<QuestionId, Question> = {
@@ -20,26 +40,22 @@ export const QUESTIONS: Record<QuestionId, Question> = {
     topic: 'Renderizado',
     text: '¿Qué mide el CLS (Cumulative Layout Shift)?',
     options: [
-      { id: 'a', label: 'El tiempo hasta que llega el primer token' },
-      { id: 'b', label: 'Cuánto se mueve el contenido que ya estaba en pantalla' },
-      { id: 'c', label: 'Cuántos nodos DOM crea la página' },
-      { id: 'd', label: 'Cuánto tarda la página en responder a un clic' },
+      { id: 'a', label: 'Cuánto tarda la página en responder a un clic' },
+      { id: 'b', label: 'El tiempo hasta que llega el primer token' },
+      { id: 'c', label: 'Cuánto se mueve el contenido que ya estaba en pantalla' },
+      { id: 'd', label: 'Cuántos nodos DOM crea la página' },
     ],
-    correct: 'b',
-    explain: 'CLS mide los saltos inesperados de lo que ya estaba visible (objetivo ≤ 0,1). Reservar el espacio con slots de altura final lo deja en ≈ 0. Lo del clic es INP.',
   },
   q2: {
     id: 'q2',
     topic: 'Reutilizar el DOM',
     text: '¿Para qué sirve una key estable en una lista que se genera en streaming?',
     options: [
-      { id: 'a', label: 'Para ordenar los elementos alfabéticamente' },
-      { id: 'b', label: 'Para guardar en caché la respuesta del modelo' },
-      { id: 'c', label: 'Para que React reutilice el mismo nodo DOM en vez de recrearlo' },
-      { id: 'd', label: 'Para que el lector de pantalla lea más rápido' },
+      { id: 'a', label: 'Para que React reutilice el mismo nodo DOM en vez de recrearlo' },
+      { id: 'b', label: 'Para que el lector de pantalla lea más rápido' },
+      { id: 'c', label: 'Para ordenar los elementos alfabéticamente' },
+      { id: 'd', label: 'Para guardar en caché la respuesta del modelo' },
     ],
-    correct: 'c',
-    explain: 'Con key = id del lugar (no la posición), React mueve o parchea el nodo existente: 156 nodos en vez de 17.913, y no se pierden foco ni clics.',
   },
   q3: {
     id: 'q3',
@@ -47,12 +63,10 @@ export const QUESTIONS: Record<QuestionId, Question> = {
     text: 'En una web agéntica, ¿qué es el grounding?',
     options: [
       { id: 'a', label: 'Conectar el modelo a internet para que busque' },
-      { id: 'b', label: 'Bajar la temperatura del modelo' },
-      { id: 'c', label: 'Ejecutar el modelo en el servidor' },
-      { id: 'd', label: 'Que el modelo solo elija datos reales de un catálogo verificado' },
+      { id: 'b', label: 'Que el modelo solo elija datos reales de un catálogo verificado' },
+      { id: 'c', label: 'Bajar la temperatura del modelo' },
+      { id: 'd', label: 'Ejecutar el modelo en el servidor' },
     ],
-    correct: 'd',
-    explain: 'Grounding: el modelo solo referencia ids de un catálogo real (lugares, hospedajes, precios). Con reglas en código y el verificador, nada inventado ni peligroso llega a la persona.',
   },
 };
 

@@ -32,7 +32,7 @@ import {
   createIcons,
   type IconNode,
 } from 'lucide';
-import { avatarSVG, comicPortrait, svgDataUrl, type AvatarOptions } from '../shared/avatar';
+import { DETAIL_LABELS, GENDER_LABEL, HAIR_LABELS, avatarSVG, comicPortrait, svgDataUrl, type AvatarGender, type AvatarOptions } from '../shared/avatar';
 import { POWERS, TYPE_META, abilityFor, cardHTML, cardPNG, winnerCode } from '../shared/card';
 import { DEMO_URL, REPO_URL, SLIDES_URL } from '../shared/config';
 import { starRepo } from '../shared/github';
@@ -85,14 +85,21 @@ let view: 'live' | 'card' | 'notes' = 'live';
 let name: string | null = store.get('name', null);
 let liked = store.get('liked', false);
 let card = store.get<null | { published: boolean }>('card', null);
-const notes = store.get<{ label: string; tip: string }[]>('notes', []);
+// Notas de bolsillo: la idea clave de cada slide (automática) + lo que la persona escriba.
+// Todo vive SOLO en el teléfono (localStorage); se puede descargar o compartir al final.
+const notes = store.get<{ label: string; tip: string; mine?: string }[]>('notes', []);
 
 async function boot() {
   createIcons({ icons: ICONS, attrs: { 'stroke-width': 1.75, 'aria-hidden': 'true' } });
   setupMenu();
   setupReactions();
   rt = await getRealtime();
-  $('[data-status]').textContent = rt.mode === 'local' ? 'Modo ensayo (local) · esperando el deck…' : 'Conectado · esperando el deck…';
+  const forcedLocal = new URLSearchParams(location.search).has('local');
+  if (rt.mode === 'local' && !forcedLocal) {
+    // Firebase no respondió (p. ej. Auth anónima sin habilitar): avisamos y reintentamos solos.
+    $('[data-status]').innerHTML = 'Sin conexión en vivo con la pantalla. Reintentando… <button class="link" type="button" onclick="location.reload()">Reintentar</button>';
+    setTimeout(() => location.reload(), 20000);
+  } else $('[data-status]').textContent = rt.mode === 'local' ? 'Modo ensayo (local) · esperando el deck…' : 'Conectado · esperando el deck…';
   rt.onSlide((s) => {
     const changed = s.index !== slide?.index || s.kind !== slide?.kind;
     slide = s;
@@ -101,6 +108,7 @@ async function boot() {
       store.set('notes', notes);
     }
     $('[data-status]').textContent = `En vivo · ${s.label} · ${s.index + 1}/${s.total}`;
+    renderScore();
     if (view === 'live') render(changed);
   });
   rt.onMyVotes((v) => {
@@ -116,7 +124,7 @@ function renderScore() {
   const el = $('[data-score]');
   const answered = Object.keys(myVotes).length;
   el.hidden = !name;
-  el.innerHTML = `${icon(Trophy, 16)} ${correctCount(myVotes)}/${answered || 0} aciertos`;
+  el.innerHTML = `${icon(Trophy, 16)} ${correctCount(myVotes, slide?.answers ?? {})}/${answered || 0} aciertos`;
 }
 
 // ── Pantallas ───────────────────────────────────────────────────────────
@@ -236,22 +244,23 @@ const closed = (qid: QuestionId) => Boolean(slide?.revealed?.[qid]);
 function updatePoll(screen: HTMLElement) {
   const qid = slide?.qid as QuestionId | undefined;
   if (!qid) return;
-  const q = QUESTIONS[qid];
   const mine = myVotes[qid];
-  const revealed = Boolean(slide?.revealed?.[qid]);
+  // La respuesta correcta solo existe en el celular cuando la presentadora revela.
+  const answer = slide?.revealed?.[qid] ? slide?.answers?.[qid] : undefined;
+  const revealed = Boolean(answer);
   screen.querySelectorAll<HTMLButtonElement>('.answer').forEach((b) => {
     const opt = b.dataset.opt;
     b.disabled = Boolean(mine) || closed(qid);
     b.classList.remove('pending');
     b.toggleAttribute('data-mine', opt === mine);
-    b.toggleAttribute('data-correct', revealed && opt === q.correct);
-    b.toggleAttribute('data-wrong', revealed && opt === mine && mine !== q.correct);
+    b.toggleAttribute('data-correct', revealed && opt === answer!.correct);
+    b.toggleAttribute('data-wrong', revealed && opt === mine && mine !== answer!.correct);
   });
   const msg = $('[data-msg]', screen);
   if (revealed) {
-    const ok = mine === q.correct;
+    const ok = mine === answer!.correct;
     msg.className = `poll-msg ${ok ? 'ok' : mine ? 'bad' : ''}`;
-    msg.innerHTML = `${mine ? (ok ? `${icon(Check, 18)} <b>¡Correcto!</b>` : '<b>Casi.</b>') : '<b>No respondiste a tiempo.</b>'} ${esc(q.explain)}`;
+    msg.innerHTML = `${mine ? (ok ? `${icon(Check, 18)} <b>¡Correcto!</b>` : '<b>Casi.</b>') : '<b>No respondiste a tiempo.</b>'} ${esc(answer!.explain)}`;
   } else if (mine) {
     msg.className = 'poll-msg';
     msg.innerHTML = `${icon(Send, 18)} Respuesta enviada. Mira la pantalla para el resultado.`;
@@ -265,9 +274,18 @@ function renderContent(screen: HTMLElement) {
     <p class="kicker">Ahora en pantalla</p>
     <h1>${esc(slide?.title || 'La charla está por empezar')}</h1>
     ${tip ? `<div class="pocket">${icon(NotebookPen, 18)}<p><b>Nota de bolsillo</b><br>${esc(tip)}</p></div>` : ''}
+    ${slide?.label ? `<label class="field my-note"><span>Mi nota sobre este slide</span><textarea rows="2" maxlength="400" data-my-note placeholder="Algo que quiero probar…">${esc(notes.find((n) => n.label === slide!.label)?.mine ?? '')}</textarea></label>` : ''}
     ${demo ? `<a class="btn wide primary" href="${DEMO_URL}" target="_blank" rel="noreferrer">${icon(MapIcon, 18)} Abrir la demo en tu celular</a>` : ''}
-    <p class="muted small">Tus notas se guardan solas en <b>Menú → Mis notas</b>.</p>
+    <p class="muted small">Se guardan solas en tu celular: <b>Menú → Mis notas</b> para descargarlas o compartirlas.</p>
   </section>`;
+  const area = screen.querySelector<HTMLTextAreaElement>('[data-my-note]');
+  area?.addEventListener('input', () => {
+    const label = slide!.label;
+    let note = notes.find((n) => n.label === label);
+    if (!note) notes.push((note = { label, tip: slide!.tip ?? '' }));
+    note.mine = area.value;
+    store.set('notes', notes);
+  });
 }
 
 function renderCardsCta(screen: HTMLElement) {
@@ -292,7 +310,7 @@ function renderPodium(screen: HTMLElement) {
         ? `<h1>${icon(Trophy, 30)} ¡Ganaste, ${esc(name)}!</h1><p>Acércate al escenario y muestra este código:</p><p class="code">${myCode}</p>`
         : pos > 0
           ? `<h1>Quedaste en el puesto ${pos + 1}</h1><p class="muted">${podium[pos].score.toLocaleString('es-DO')} puntos. ¡Gran partida!</p>`
-          : `<h1>¡Gracias por jugar!</h1><p class="muted">Acertaste ${correctCount(myVotes)} de 3. El podio está en la pantalla.</p>`
+          : `<h1>¡Gracias por jugar!</h1><p class="muted">Acertaste ${correctCount(myVotes, slide?.answers ?? {})} de 3. El podio está en la pantalla.</p>`
     }
     <p class="fine">Tu código: <b>${myCode}</b></p>
   </section>`;
@@ -310,15 +328,44 @@ function renderEnd(screen: HTMLElement) {
   $('[data-go-notes]', screen).addEventListener('click', () => go('notes'));
 }
 
+function notesMarkdown(): string {
+  const lines = notes.map((n) => `## ${n.label}\n${n.tip ? `- ${n.tip}\n` : ''}${n.mine ? `- **Mi nota:** ${n.mine}\n` : ''}`);
+  return `# IA rápida, UI fluida — mis notas\nDevFest Santo Domingo 2026 · Vanessa Aristizabal (@vanessamarelycode)\n\n${lines.join('\n')}\n---\n- Repo: ${REPO_URL}\n- Slides: ${SLIDES_URL}\n- Demo: ${DEMO_URL}\n`;
+}
+
 function renderNotes(screen: HTMLElement) {
   screen.dataset.screen = 'notes';
   screen.innerHTML = `<section class="card-sheet">
     <p class="kicker">Notas de bolsillo</p>
     <h1>Lo que me llevo</h1>
-    ${notes.length ? `<ol class="notes">${notes.map((n) => `<li><b>${esc(n.label)}</b><span>${esc(n.tip)}</span></li>`).join('')}</ol>` : '<p class="muted">Se irán llenando solas mientras avanza la charla.</p>'}
-    <button class="btn wide" type="button" data-back>Volver al en vivo</button>
+    <p class="muted small">La idea clave de cada slide se guarda sola; también puedes escribir las tuyas en cada slide. Todo queda en tu celular.</p>
+    ${notes.length ? `<ol class="notes">${notes.map((n) => `<li><b>${esc(n.label)}</b>${n.tip ? `<span>${esc(n.tip)}</span>` : ''}${n.mine ? `<span class="mine">Mi nota: ${esc(n.mine)}</span>` : ''}</li>`).join('')}</ol>` : '<p class="muted">Se irán llenando solas mientras avanza la charla.</p>'}
+    <div class="row">
+      <button class="btn primary" type="button" data-download-notes ${notes.length ? '' : 'disabled'}>${icon(Download, 18)} Descargar (.md)</button>
+      <button class="btn" type="button" data-share-notes ${notes.length ? '' : 'disabled'}>${icon(Send, 18)} Compartir</button>
+    </div>
+    <button class="btn wide ghost" type="button" data-back>Volver al en vivo</button>
   </section>`;
   $('[data-back]', screen).addEventListener('click', () => go('live'));
+  $('[data-download-notes]', screen).addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([notesMarkdown()], { type: 'text/markdown;charset=utf-8' }));
+    a.download = 'ia-rapida-ui-fluida-notas.md';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+  $('[data-share-notes]', screen).addEventListener('click', async () => {
+    const text = notesMarkdown();
+    try {
+      if (navigator.share) await navigator.share({ title: 'IA rápida, UI fluida — mis notas', text });
+      else {
+        await navigator.clipboard.writeText(text);
+        alert('Notas copiadas al portapapeles.');
+      }
+    } catch {
+      /* la persona canceló */
+    }
+  });
 }
 
 // ── Creador de card (todo en el dispositivo) ────────────────────────────
@@ -337,9 +384,13 @@ let draft: Draft = store.get('draft', {
   power: 'Angular',
   years: 3,
   mode: 'avatar',
-  avatar: { colorway: 'green', skin: 1, hair: 0, accessory: 1, mood: 0 },
+  avatar: { colorway: 'green', gender: 'x', skin: 1, hair: 0, hairColor: 0, detail: 0, accessory: 1, mood: 0 },
   photo: null,
 });
+
+// Drafts viejos (antes del selector de género) se completan con valores por defecto.
+const legacy = draft.avatar as Partial<AvatarOptions>;
+draft.avatar = { ...draft.avatar, gender: legacy.gender ?? 'x', hairColor: legacy.hairColor ?? legacy.hair ?? 0, detail: legacy.detail ?? 0 };
 
 function draftImage(): string {
   if (draft.mode === 'photo' && draft.photo) return draft.photo;
@@ -401,15 +452,33 @@ function renderCardCreator(screen: HTMLElement) {
         preview();
       });
     } else {
-      const opts: [keyof AvatarOptions, string, number][] = [
+      const g = draft.avatar.gender;
+      const choice = (key: 'gender' | 'hair' | 'detail', labels: string[], values: (string | number)[]) =>
+        `<div class="chips" role="radiogroup">${labels
+          .map((l, i) => `<button type="button" role="radio" aria-checked="${String(draft.avatar[key]) === String(values[i])}" data-pick="${key}" data-value="${values[i]}">${l}</button>`)
+          .join('')}</div>`;
+      const ranges: [keyof AvatarOptions, string, number][] = [
         ['skin', 'Piel', 5],
-        ['hair', 'Cabello', 5],
+        ['hairColor', 'Color de cabello', 5],
         ['accessory', 'Accesorio', 4],
         ['mood', 'Expresión', 3],
       ];
-      panel.innerHTML = `<div class="avatar-opts">${opts
-        .map(([k, label, n]) => `<label><span>${label}</span><input type="range" min="0" max="${n - 1}" value="${draft.avatar[k]}" data-av="${k}" /></label>`)
-        .join('')}</div><button class="btn ghost" type="button" data-random>${icon(Shuffle, 16)} Sorpréndeme</button>`;
+      panel.innerHTML = `<p class="mini">Persona</p>${choice('gender', Object.values(GENDER_LABEL), Object.keys(GENDER_LABEL))}
+        <p class="mini">Peinado</p>${choice('hair', HAIR_LABELS[g], [0, 1, 2, 3, 4])}
+        <p class="mini">Detalle</p>${choice('detail', DETAIL_LABELS[g], [0, 1, 2])}
+        <div class="avatar-opts">${ranges
+          .map(([k, label, n]) => `<label><span>${label}</span><input type="range" min="0" max="${n - 1}" value="${draft.avatar[k]}" data-av="${k}" /></label>`)
+          .join('')}</div><button class="btn ghost" type="button" data-random>${icon(Shuffle, 16)} Sorpréndeme</button>`;
+      panel.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const key = b.dataset.pick as 'gender' | 'hair' | 'detail';
+          if (key === 'gender') draft.avatar = { ...draft.avatar, gender: b.dataset.value as AvatarGender, hair: 0, detail: 0 };
+          else draft.avatar = { ...draft.avatar, [key]: Number(b.dataset.value) };
+          save();
+          modePanel();
+          preview();
+        }),
+      );
       panel.querySelectorAll<HTMLInputElement>('[data-av]').forEach((inp) =>
         inp.addEventListener('input', () => {
           (draft.avatar[inp.dataset.av as keyof AvatarOptions] as number) = Number(inp.value);
@@ -418,7 +487,7 @@ function renderCardCreator(screen: HTMLElement) {
         }),
       );
       $('[data-random]', panel).addEventListener('click', () => {
-        draft.avatar = { ...draft.avatar, skin: rnd(5), hair: rnd(5), accessory: rnd(4), mood: rnd(3) };
+        draft.avatar = { ...draft.avatar, skin: rnd(5), hair: rnd(5), hairColor: rnd(5), detail: rnd(3), accessory: rnd(4), mood: rnd(3) };
         save();
         modePanel();
         preview();

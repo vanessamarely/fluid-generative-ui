@@ -8,7 +8,7 @@
 //  · Solo el deck escucha las colecciones (likes, votos, jugadores, cards) y publica
 //    agregados (resultados, podio) en el documento de sesión en momentos puntuales.
 import { hasFirebase } from './config';
-import { QUESTIONS, type QuestionId, type Reaction } from './questions';
+import type { AnswerKey, QuestionId, Reaction } from './questions';
 
 export type LiveKind = 'content' | 'join' | 'poll' | 'cards' | 'podium' | 'demo' | 'end';
 
@@ -33,6 +33,8 @@ export interface SlideState {
   results: Partial<Record<QuestionId, PollResult>>;
   podium: { name: string; score: number; code?: string }[];
   players: number;
+  /** respuestas YA reveladas (la presentadora las publica una por una al revelar) */
+  answers: AnswerKey;
 }
 
 export const emptySlide = (): SlideState => ({
@@ -47,6 +49,7 @@ export const emptySlide = (): SlideState => ({
   results: {},
   podium: [],
   players: 0,
+  answers: {},
 });
 
 export type CardType = 'web' | 'ia' | 'cloud' | 'mobile';
@@ -107,6 +110,11 @@ export interface Realtime {
 
   /** Solo presentadora: login con GitHub para poder escribir la sesión. */
   signInPresenter(): Promise<boolean>;
+  /** ¿La sesión actual ya es la de la presentadora? (las reglas de Firestore deciden de verdad) */
+  isPresenterSession(): boolean;
+  /** Respuestas privadas: solo la presentadora puede leerlas o escribirlas. */
+  loadAnswers(): Promise<AnswerKey | null>;
+  saveAnswers(a: AnswerKey): Promise<void>;
   /** Login opcional con GitHub (scope public_repo) para dar ⭐. No guarda la identidad. */
   githubTokenForStar(): Promise<{ token: string; login: string } | null>;
 }
@@ -141,17 +149,18 @@ export function tally(all: VoteRecord[], q: QuestionId): PollResult {
   return { counts, total };
 }
 
-/** Puntos estilo Kahoot: solo suma quien ACIERTA (500 + hasta 500 por rapidez); like +100; card +300. */
+/** Puntos estilo Kahoot: solo suma quien ACIERTA (500 + bono por rapidez); like +100; card +300. */
 export function scoreFor(
   vote: VoteRecord | undefined,
   slide: Pick<SlideState, 'openedAt' | 'duration'>,
   liked: boolean,
   hasCard: boolean,
+  answers: AnswerKey,
 ): number {
   let score = (liked ? 100 : 0) + (hasCard ? 300 : 0);
   if (!vote) return score;
   for (const q of Object.keys(vote.votes) as QuestionId[]) {
-    if (vote.votes[q] !== QUESTIONS[q]?.correct) continue;
+    if (!answers[q] || vote.votes[q] !== answers[q]!.correct) continue;
     score += 500;
     const opened = slide.openedAt[q];
     const at = vote.at[q];
@@ -164,5 +173,6 @@ export function scoreFor(
   return score;
 }
 
-/** Aciertos de una persona (para mostrarlos en su celular). */
-export const correctCount = (votes: Votes) => (Object.keys(votes) as QuestionId[]).filter((q) => votes[q] === QUESTIONS[q]?.correct).length;
+/** Aciertos según las respuestas ya reveladas. */
+export const correctCount = (votes: Votes, answers: AnswerKey) =>
+  (Object.keys(votes) as QuestionId[]).filter((q) => answers[q] && votes[q] === answers[q]!.correct).length;

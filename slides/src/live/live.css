@@ -100,6 +100,8 @@ main { max-width: 520px; margin: 0 auto; min-height: 60dvh; }
 .notes { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
 .notes li { line-height: 1.4; }
 .notes li span { display: block; color: var(--ink-dim); }
+.notes li .mine { color: var(--ink); font-style: italic; }
+.my-note textarea { min-height: 64px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; background: var(--bg); font-size: 16px; resize: vertical; width: 100%; }
 
 .podium-card.winner { background: var(--p-yellow); }
 .podium-card h1 { display: flex; align-items: center; gap: 10px; }
@@ -133,3 +135,9 @@ main { max-width: 520px; margin: 0 auto; min-height: 60dvh; }
 @keyframes pop { 50% { transform: scale(1.25); } }
 @media (min-width: 720px) { h1 { font-size: 32px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+.mini { margin: 8px 0 4px; font: 300 12px var(--mono); text-transform: uppercase; color: var(--ink-dim); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { min-height: 38px; padding: 6px 12px; border: 2px solid var(--line); border-radius: 999px; background: var(--bg); font-size: 14px; cursor: pointer; }
+.chips button[aria-checked='true'] { background: var(--ink); color: var(--bg); }
+.link { border: 0; background: none; text-decoration: underline; padding: 0; cursor: pointer; }
