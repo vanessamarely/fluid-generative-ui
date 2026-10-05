@@ -41,9 +41,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* ── Header ─────────────────────────────────────────── */
 .site-header {
-  position: sticky; top: 0; z-index: 30;
+  position: sticky; top: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
-  height: 52px; padding: 0 clamp(20px, 4vw, 36px);
+  height: 52px; padding: 0 calc(clamp(20px, 4vw, 36px) + 52px) 0 clamp(20px, 4vw, 36px);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(20px) saturate(1.6);
   background: rgba(255, 255, 255, 0.82);
@@ -54,13 +54,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand-word span { color: var(--muted); font-weight: 400; }
 .header-right { display: flex; gap: 12px; align-items: center; }
 .engine-pill { padding: 4px 10px; border-radius: var(--pill); background: var(--surface-alt); white-space: nowrap; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; }
-.site-menu { position: relative; }
+.site-menu { position: fixed; top: 6px; right: clamp(12px, 3vw, 28px); z-index: 1000; }
+/* El menú siempre en la misma esquina, por encima de mapa, laboratorio, consola y panel. */
 .menu-button { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--surface); display: grid; place-content: center; gap: 4px; cursor: pointer; }
 .menu-button span { display: block; width: 18px; height: 2px; border-radius: 2px; background: var(--ink); transition: transform 200ms, opacity 200ms; }
 .menu-button[aria-expanded='true'] span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .menu-button[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
 .menu-button[aria-expanded='true'] span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-.menu-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 50; width: min(340px, calc(100vw - 32px)); padding: 8px; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16); border: 1px solid var(--border); display: grid; gap: 6px; animation: rise 160ms ease-out both; }
+.menu-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 1000; width: min(340px, calc(100vw - 32px)); padding: 8px; border-radius: var(--radius-md); background: var(--surface); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16); border: 1px solid var(--border); display: grid; gap: 6px; animation: rise 160ms ease-out both; }
 .menu-panel[hidden] { display: none; }
 .menu-panel nav { display: grid; gap: 2px; }
 .menu-secondary { border-top: 1px solid var(--border); padding-top: 6px; }
@@ -331,3 +332,13 @@ main { padding: 0 clamp(20px, 5vw, 48px) 120px; max-width: 1440px; margin: 0 aut
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* En los iframes de /compare el laboratorio es solo una franja de métricas */
+.rumbo[data-embed] .lab { left: 8px; right: 8px; bottom: 8px; width: auto; padding: 8px; gap: 0; }
+.rumbo[data-embed] .lab header,
+.rumbo[data-embed] .lab .lab-row,
+.rumbo[data-embed] .lab .lab-engine,
+.rumbo[data-embed] .lab .lab-apis { display: none; }
+.rumbo[data-embed] .lab .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.rumbo[data-embed] .lab .metric dd { font-size: 14px; }
+.rumbo[data-embed] main { padding-bottom: 140px; }

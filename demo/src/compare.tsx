@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { useEffect, useRef, useState } from 'react';
 import { runWorkflow } from './trip/workflow';
 import type { TripRequest } from './trip/agents';
-import { SiteMenu } from './ui/SiteMenu';
+import { SiteHeader } from './ui/SiteHeader';
 import './styles.css';
 import './compare.css';
 
@@ -47,9 +47,9 @@ function Compare() {
 
   return (
     <div className="compare">
-      <header className="compare-bar">
-        <SiteMenu current="compare" />
-        <strong>rumbo · ingenuo vs fluido</strong>
+      <SiteHeader current="compare" status="Simulado · mismo stream" />
+      <div className="compare-bar" role="toolbar" aria-label="Controles de la comparación">
+        <strong>Ingenuo vs fluido</strong>
         <select value={text} onChange={(e) => setText(e.target.value)} aria-label="Viaje">
           {PRESETS.map((p) => (
             <option key={p}>{p}</option>
@@ -64,7 +64,7 @@ function Compare() {
         <button className="btn" type="button" disabled={running} onClick={() => void go('Agrega un día de playa')}>
           Refinar: + día de playa
         </button>
-      </header>
+      </div>
       <div className="compare-panes">
         <section>
           <h2>v1 · ingenuo</h2>

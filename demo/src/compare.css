@@ -1,4 +1,4 @@
-.compare { height: 100vh; display: grid; grid-template-rows: auto 1fr; }
+.compare { height: 100vh; display: grid; grid-template-rows: auto auto 1fr; }
 .compare-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
 .compare-bar select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border-strong); max-width: 420px; }
 .compare-bar label { display: flex; gap: 6px; align-items: center; }
@@ -12,4 +12,3 @@
   .compare-panes { grid-template-columns: 1fr; }
   .compare-panes iframe { height: 80vh; }
 }
-.compare-bar .menu-panel { left: 0; right: auto; }

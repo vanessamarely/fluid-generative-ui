@@ -14,7 +14,7 @@ import { DaysList, LodgingList, TripHeader } from './ui/TripFluid';
 import { TripNaive, type NaiveState } from './ui/TripNaive';
 import { BudgetCard, ChecksPanel, WorkflowGraph, initialNodes, type Nodes } from './ui/Workflow';
 import { callTool, registerTripTools } from './webmcp/tools';
-import { SiteMenu } from './ui/SiteMenu';
+import { SiteHeader } from './ui/SiteHeader';
 
 const params = new URLSearchParams(location.search);
 const REMOTE = params.has('remote'); // iframe de /compare: recibe los eventos del padre
@@ -317,22 +317,7 @@ export function App() {
   return (
     <div className="rumbo" data-render={lab.render} data-embed={EMBED || undefined}>
       {!EMBED && (
-        <header className="site-header">
-          <a className="brand" href="./">
-            <span className="brand-mark" aria-hidden="true">
-              r
-            </span>
-            <span className="brand-word">
-              rumbo<span>.ai</span>
-            </span>
-          </a>
-          <div className="header-right">
-            <span className="engine-pill mono" title="Motor de IA de la última ejecución">
-              {engineLabel || 'IA en tu navegador'}
-            </span>
-            <SiteMenu current="app" onLab={() => setLabOpen(true)} />
-          </div>
-        </header>
+        <SiteHeader current="app" status={engineLabel} onLab={() => setLabOpen(true)} />
       )}
 
       <main>
