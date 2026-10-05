@@ -1,5 +1,6 @@
 // Menú hamburguesa: cambiar de pantalla (planificador, comparación, laboratorio)
 // y saltar al slide deck o al repo. Accesible: aria-expanded, Esc, foco y clic afuera.
+import { ArrowUpRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { REPO_URL, SLIDES_URL } from '../shared/config';
 
@@ -60,11 +61,11 @@ export function SiteMenu({ current, onLab }: { current: 'app' | 'compare'; onLab
         </nav>
         <nav aria-label="Enlaces de la charla" className="menu-secondary">
           <a href={SLIDES_URL} target="_blank" rel="noreferrer">
-            <strong>Slide deck ↗</strong>
+            <strong>Slide deck <ArrowUpRight size={14} aria-hidden="true" /></strong>
             <span>IA rápida, UI fluida</span>
           </a>
           <a href={REPO_URL} target="_blank" rel="noreferrer">
-            <strong>Repositorio ↗</strong>
+            <strong>Repositorio <ArrowUpRight size={14} aria-hidden="true" /></strong>
             <span>github.com/vanessamarely/fluid-generative-ui</span>
           </a>
         </nav>

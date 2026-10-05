@@ -71,7 +71,7 @@ export function App() {
   const [lab, setLab] = useState<LabSettings>({
     render: params.get('render') === 'naive' ? 'naive' : 'fluid',
     verify: params.get('verify') !== '0',
-    engine: (params.get('engine') as ProviderChoice) || 'auto',
+    engine: (params.get('engine') as ProviderChoice) || 'auto', // ?engine=mock fuerza el simulado (ensayos)
     speed: Number(params.get('speed')) || 70,
   });
   const [labOpen, setLabOpen] = useState(params.has('lab'));
@@ -217,7 +217,7 @@ export function App() {
       if (override) setReq(r);
       if (!instruction) setChosen(null);
       const engine = await resolveEngine(lab.engine);
-      setEngineLabel({ nano: 'Gemini Nano · en tu dispositivo', hybrid: 'Firebase AI Logic · híbrido', cloud: 'Gemini en la nube', mock: 'Simulado · sin red' }[engine]);
+      setEngineLabel({ nano: 'Gemini Nano · en tu dispositivo', cloud: 'Gemini API · nube', mock: 'Simulado · sin red' }[engine]);
       const finished = new Promise<void>((res) => (doneRef.current = res));
       await runWorkflow({
         req: r,

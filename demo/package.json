@@ -8,8 +8,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "firebase": "^12.19.0",
     "leaflet": "^1.9.4",
+    "lucide": "^1.52.0",
+    "lucide-react": "^1.52.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

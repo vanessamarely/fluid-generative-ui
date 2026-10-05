@@ -10,7 +10,8 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import L from 'leaflet';
 import { parsePartialJson } from '../genui/json-stream';
 import type { ItineraryDoc, LodgingDoc } from '../trip/agents';
-import { KIND_EMOJI, LODGING_BY_ID, PLACE_BY_ID, REGIONS, type RegionId } from '../trip/places';
+import { LODGING_BY_ID, PLACE_BY_ID, REGIONS, type RegionId } from '../trip/places';
+import { kindIconSvg } from './icons';
 import { createMap, markerIcon } from './TripMap';
 
 export interface NaiveState {
@@ -30,7 +31,7 @@ function itineraryHTML(doc: ItineraryDoc | null): string {
 <ul class="places">${(d.placeIds ?? [])
         .map((id) => PLACE_BY_ID.get(id))
         .filter(Boolean)
-        .map((p) => `<li class="place"><button type="button"><span class="place-emoji">${KIND_EMOJI[p!.kind]}</span><span class="place-body"><span class="place-name">${esc(p!.name)}</span><span class="place-meta">${p!.hours} h</span></span></button></li>`)
+        .map((p) => `<li class="place"><button type="button"><span class="place-emoji">${kindIconSvg(p!.kind)}</span><span class="place-body"><span class="place-name">${esc(p!.name)}</span><span class="place-meta">${p!.hours} h</span></span></button></li>`)
         .join('')}</ul><p class="day-note">${esc(d.note)}</p></article></li>`,
     )
     .join('');
@@ -71,7 +72,7 @@ export function TripNaive({ state, onRender }: { state: NaiveState; onRender?: (
     (it.plan ?? []).forEach((d, day) =>
       (d.placeIds ?? []).forEach((id) => {
         const p = PLACE_BY_ID.get(id);
-        if (p) L.marker([p.lat, p.lng], { icon: markerIcon(day, KIND_EMOJI[p.kind]) }).addTo(map.current!);
+        if (p) L.marker([p.lat, p.lng], { icon: markerIcon(day, kindIconSvg(p.kind, 14)) }).addTo(map.current!);
       }),
     );
     onRender?.();

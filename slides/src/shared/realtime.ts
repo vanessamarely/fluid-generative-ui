@@ -8,9 +8,9 @@
 //  · Solo el deck escucha las colecciones (likes, votos, jugadores, cards) y publica
 //    agregados (resultados, podio) en el documento de sesión en momentos puntuales.
 import { hasFirebase } from './config';
-import type { QuestionId, Reaction } from './questions';
+import { QUESTIONS, type QuestionId, type Reaction } from './questions';
 
-export type LiveKind = 'content' | 'join' | 'poll' | 'ab' | 'cards' | 'podium' | 'demo' | 'end';
+export type LiveKind = 'content' | 'join' | 'poll' | 'cards' | 'podium' | 'demo' | 'end';
 
 export interface PollResult {
   counts: Record<string, number>;
@@ -115,9 +115,16 @@ let instance: Promise<Realtime> | null = null;
 
 export function getRealtime(): Promise<Realtime> {
   if (!instance) {
+    const local = () => import('./realtime-local').then((m) => m.createLocalRealtime());
     instance = hasFirebase
-      ? import('./realtime-firebase').then((m) => m.createFirebaseRealtime())
-      : import('./realtime-local').then((m) => m.createLocalRealtime());
+      ? import('./realtime-firebase')
+          .then((m) => m.createFirebaseRealtime())
+          .catch((err) => {
+            // Si Firebase falla (sin red, Auth sin habilitar…), seguimos en modo local para no romper el deck.
+            console.warn('[live] Firebase no disponible, modo local:', err);
+            return local();
+          })
+      : local();
   }
   return instance;
 }
@@ -134,7 +141,7 @@ export function tally(all: VoteRecord[], q: QuestionId): PollResult {
   return { counts, total };
 }
 
-/** Puntos estilo Kahoot: 500 por responder + hasta 500 por rapidez; like +100; card +300. */
+/** Puntos estilo Kahoot: solo suma quien ACIERTA (500 + hasta 500 por rapidez); like +100; card +300. */
 export function scoreFor(
   vote: VoteRecord | undefined,
   slide: Pick<SlideState, 'openedAt' | 'duration'>,
@@ -144,6 +151,7 @@ export function scoreFor(
   let score = (liked ? 100 : 0) + (hasCard ? 300 : 0);
   if (!vote) return score;
   for (const q of Object.keys(vote.votes) as QuestionId[]) {
+    if (vote.votes[q] !== QUESTIONS[q]?.correct) continue;
     score += 500;
     const opened = slide.openedAt[q];
     const at = vote.at[q];
@@ -154,3 +162,6 @@ export function scoreFor(
   }
   return score;
 }
+
+/** Aciertos de una persona (para mostrarlos en su celular). */
+export const correctCount = (votes: Votes) => (Object.keys(votes) as QuestionId[]).filter((q) => votes[q] === QUESTIONS[q]?.correct).length;

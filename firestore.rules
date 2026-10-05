@@ -4,7 +4,7 @@ rules_version = '2';
 //   sessions/{sid}                 ← slide actual, preguntas abiertas, resultados y podio. Solo la presentadora escribe.
 //   sessions/{sid}/players/{uid}   ← apodo (generado, no texto libre) para el podio
 //   sessions/{sid}/likes/{uid}     ← 1 like por persona (idempotente)
-//   sessions/{sid}/votes/{uid}     ← { q1, q1At, q2, q2At, q3, q3At } — qNAt = hora del servidor (puntaje justo)
+//   sessions/{sid}/votes/{uid}     ← { q1, q1At, … } — qNAt = hora del servidor (puntaje justo y no editable)
 //   sessions/{sid}/reactions/{uid} ← último emoji enviado (limitado a 1 cada ~0.8 s)
 //   sessions/{sid}/cards/{uid}     ← card/avatar de cada asistente
 //
@@ -50,7 +50,7 @@ service cloud.firestore {
         allow create, update: if isOwner(uid)
           && onlyKeys(['q1', 'q1At', 'q2', 'q2At', 'q3', 'q3At'])
           && validAnswer('q1', ['a', 'b', 'c', 'd'])
-          && validAnswer('q2', ['naive', 'fluid'])
+          && validAnswer('q2', ['a', 'b', 'c', 'd'])
           && validAnswer('q3', ['a', 'b', 'c', 'd']);
       }
 
@@ -68,9 +68,9 @@ service cloud.firestore {
       match /reactions/{uid} {
         allow read: if true;
         allow create: if isOwner(uid) && onlyKeys(['emoji', 'at', 'n'])
-          && request.resource.data.emoji in ['🔥', '👏', '🤯', '💡', '❤️', '🚀'];
+          && request.resource.data.emoji in ['fire', 'clap', 'mind', 'idea', 'heart', 'rocket'];
         allow update: if isOwner(uid) && onlyKeys(['emoji', 'at', 'n'])
-          && request.resource.data.emoji in ['🔥', '👏', '🤯', '💡', '❤️', '🚀']
+          && request.resource.data.emoji in ['fire', 'clap', 'mind', 'idea', 'heart', 'rocket']
           && request.time > resource.data.at + duration.value(800, 'ms');
       }
 

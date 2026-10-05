@@ -11,7 +11,7 @@
 import type { EndStatus } from '../genui/engine';
 import { parsePartialJson } from '../genui/json-stream';
 import { trackSpan } from '../genui/perf-tracks';
-import { firebaseProvider, mockProvider, nanoProvider, nanoSession, sleep, type GenProvider } from '../genui/providers';
+import { cloudProvider, mockProvider, nanoProvider, nanoSession, sleep, type Engine, type GenProvider } from '../genui/providers';
 import {
   INTENT_PROMPT,
   INTENT_SCHEMA,
@@ -31,7 +31,7 @@ import {
 import { mockIntent, mockItinerary, mockLodging } from './planner';
 import { verifyTrip, type Check } from './verify';
 
-export type Engine = 'nano' | 'hybrid' | 'cloud' | 'mock';
+export type { Engine };
 export type NodeId = 'intent' | 'itinerary' | 'lodging' | 'verify' | 'synthesis';
 export type NodeStatus = 'idle' | 'waiting' | 'running' | 'done' | 'error' | 'skipped' | 'loop';
 
@@ -69,10 +69,8 @@ function providerFor(engine: Engine, agent: AgentId, ctx: AgentContext, speed: n
   switch (engine) {
     case 'nano':
       return nanoProvider(spec);
-    case 'hybrid':
-      return firebaseProvider(spec, 'prefer_on_device');
     case 'cloud':
-      return firebaseProvider(spec, 'only_in_cloud');
+      return cloudProvider(spec);
     default:
       return mockProvider(() => JSON.stringify(spec.mock(ctx), null, 1), speed * spec.speed, spec.think);
   }
@@ -199,9 +197,9 @@ async function detectIntent(engine: Engine, req: TripRequest, signal: AbortSigna
       console.warn('[rumbo] intención con Nano falló, uso reglas locales', err);
     }
   }
-  if (engine === 'hybrid' || engine === 'cloud') {
+  if (engine === 'cloud') {
     try {
-      const provider = firebaseProvider({ system: INTENT_PROMPT, schema: INTENT_SCHEMA }, engine === 'cloud' ? 'only_in_cloud' : 'prefer_on_device');
+      const provider = cloudProvider({ system: INTENT_PROMPT, schema: INTENT_SCHEMA });
       let text = '';
       for await (const d of provider.stream({ prompt: `Pedido: ${req.text}`, signal })) text += d;
       return JSON.parse(text) as Intent;

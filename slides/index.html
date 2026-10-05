@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IA rápida, UI fluida — DevFest Santo Domingo 2026</title>
+    <meta name="description" content="Cómo optimizar una UI generativa: renderizado, streaming, reutilización del DOM, estado y accesibilidad, con Gemini Nano, WebMCP y agentes en la web." />
+    <link rel="icon" href="/brand/logo-icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono:wght@100;300;400;500&display=swap" />
+    <!-- En <head> (no importado desde JS): deck-stage copia las hojas de estilo a las miniaturas al iniciar. -->
+    <link rel="stylesheet" href="/src/deck/deck.css" />
+    <link rel="stylesheet" href="/src/shared/card.css" />
+    <script>
+      // Tema antes del primer pintado (sin parpadeo): claro DevFest por defecto.
+      try {
+        const t = new URLSearchParams(location.search).get('theme') || localStorage.getItem('deck.theme');
+        if (t === 'dark') document.documentElement.dataset.theme = 'dark';
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <deck-stage width="1280" height="720">
+      <!-- ═════════════ 01 PORTADA ═════════════ -->
+      <section data-label="Portada" class="cover" data-three="logo" data-tip="La IA ya no responde texto: responde interfaces. Hoy aprendemos a que se sientan rápidas.">
+        <div class="three-slot"></div>
+        <img class="badge-img devfest-only" src="/brand/web-badge.svg" alt="Web @DevFest Santo Domingo" />
+        <div class="frame">
+          <h1 class="cover-title"><span>IA rápida,</span><span><span class="hl">UI fluida</span>.</span></h1>
+          <p class="cover-sub">Renderizado, streaming, reutilización del DOM y estado para UIs generativas rápidas y accesibles.</p>
+          <div class="speaker">
+            <img src="/brand/vanessa.png" alt="" />
+            <div><strong>Vanessa Aristizabal</strong><span>GDE Web &amp; Angular · GitHub Star</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ 02 ÚNETE ═════════════ -->
+      <section data-label="Únete" data-live="join" data-tip="Entra con tu apodo: hay 3 preguntas con puntos y un podio al final.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Esta charla es una app</p>
+          <h2 class="title">Escanea, únete y <span class="hl">juega</span> conmigo</h2>
+          <div class="grid-3" style="grid-template-columns: 1.05fr 0.8fr 1.15fr; align-items: start">
+            <div class="qr-card">
+              <div data-qr="live"></div>
+              <strong>Únete a la charla</strong>
+              <span data-live-url>…</span>
+            </div>
+            <div class="qr-card sm">
+              <div data-qr="repo"></div>
+              <strong>Repositorio</strong>
+              <span>fluid-generative-ui</span>
+            </div>
+            <div class="stack">
+              <div class="grid-3" style="gap: 10px">
+                <div class="box blue"><div class="counter-big"><span data-count="players">0</span></div><small class="mono">jugadores</small></div>
+                <div class="box red"><div class="counter-big"><span data-count="likes">0</span></div><small class="mono ic"><i data-lucide="heart"></i> likes</small></div>
+                <div class="box yellow"><div class="counter-big"><span data-count="stars">—</span></div><small class="mono ic"><i data-lucide="star"></i> GitHub</small></div>
+              </div>
+              <p class="mono small muted" style="margin: 0">3 preguntas · puntos por rapidez · crea tu card mientras hablo</p>
+              <div class="lobby" data-lobby aria-live="off"></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 03 BIO ═════════════ -->
+      <section data-label="Quién soy" data-tip="Vanessa Aristizabal · @vanessamarely en GitHub.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Quién soy</p>
+          <div class="bio">
+            <img class="bio-photo" src="/brand/vanessa.png" alt="Vanessa Aristizabal" />
+            <div>
+              <h2>Vanessa Aristizabal</h2>
+              <p class="sub" style="margin: 0">Software Engineer</p>
+              <ul>
+                <li>Ingeniera de Sistemas y Magíster en Ingeniería</li>
+                <li>Google Developer Expert — Web Technologies &amp; Angular</li>
+                <li>GitHub Star</li>
+                <li>Creadora de contenido · <span class="mono">@vanessamarelycode</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 04 VIÑETA 1 ═════════════ -->
+      <section data-label="Conoce a Lucía" data-tip="Spoiler: el Gremlin se llama Layout Shift.">
+        <div class="frame">
+          <p class="eyebrow">// Capítulo 1 · Lucía quiere viajar</p>
+          <div class="comic reveal">
+            <div class="panel" style="--i: 0">
+              <span class="cap">Domingo, 9:00 p. m.</span>
+              <div class="bubble" style="top: 60px; left: 20px">¡Voy a planear mi escapada con IA!</div>
+              <svg class="who"><use href="#lucia-happy" /></svg>
+            </div>
+            <div class="panel" style="--i: 1">
+              <span class="cap">9:00:08 p. m.</span>
+              <div class="phone"><div class="spin"></div><div class="ln"></div><div class="ln" style="width: 70%"></div><div style="text-align: center; font-weight: 700">Generando…</div></div>
+              <div class="bubble right" style="bottom: 150px; right: 16px">¿Sigue… pensando?</div>
+              <svg class="who sm" style="justify-self: start"><use href="#lucia-wait" /></svg>
+            </div>
+            <div class="panel" style="--i: 2">
+              <span class="cap">9:00:09 p. m.</span>
+              <div class="phone"><div class="ln"></div><div class="ln"></div><div class="btn jump">Reservar</div><div class="ln"></div></div>
+              <svg class="who sm wiggle" style="position: absolute; right: 8px; top: 120px"><use href="#gremlin" /></svg>
+              <div class="bubble shout" style="bottom: 150px; left: 14px">¡¿Dónde se fue mi botón?!</div>
+              <svg class="who sm" style="justify-self: start"><use href="#lucia-angry" /></svg>
+            </div>
+          </div>
+          <p class="comic-note">Spoiler: el gremlin se llama <b>Layout Shift</b>. Y tiene primos.</p>
+        </div>
+      </section>
+
+      <!-- ═════════════ 06 STATEMENT ═════════════ -->
+      <section data-label="La IA responde interfaces" data-tip="El modelo devuelve datos; tu UI decide cómo se ven, cuánto miden y cómo se anuncian.">
+        <div class="frame center">
+          <div class="statement">
+            <img src="/brand/scallop-bracket-left.svg" alt="" />
+            <p><b>La IA ya no responde texto.</b><br />Responde <span class="hl">interfaces</span>… y esas interfaces tienen que sentirse rápidas.</p>
+            <img src="/brand/scallop-bracket-right.svg" alt="" />
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════════════ 07 ESPECTRO ═════════════ -->
+      <section data-label="Espectro de UI generativa" data-tip="Punto medio recomendado: catálogo de componentes + JSON Schema.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// ¿Qué tan "generativa" es tu UI?</p>
+          <h2 class="title">Del chat al <span class="hl">componente</span></h2>
+          <div class="grid-4 reveal" style="align-items: stretch">
+            <div class="box" style="--i: 0"><span class="pill">1</span><h3 style="margin-top: 10px">Texto</h3><p>Un chat que responde párrafos. Fácil, pero no es UI.</p></div>
+            <div class="box" style="--i: 1"><span class="pill">2</span><h3 style="margin-top: 10px">Markdown → HTML</h3><p><code>innerHTML</code> en cada token. Aquí viven los gremlins.</p></div>
+            <div class="box blue" style="--i: 2"><span class="pill blue">3</span><h3 style="margin-top: 10px">Componentes declarados</h3><p>El modelo elige de un <b>catálogo</b> y devuelve <b>datos</b> validados por un schema.</p></div>
+            <div class="box" style="--i: 3"><span class="pill">4</span><h3 style="margin-top: 10px">Código libre</h3><p>El modelo escribe la UI. Potente… y difícil de asegurar y de medir.</p></div>
+          </div>
+          <p class="lead" style="margin-top: 26px">Hoy trabajamos en el <span class="hl">nivel 3</span>: seguro, accesible por diseño y optimizable.</p>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 08 WEB AGÉNTICA ═════════════ -->
+      <section data-label="Web agéntica" data-tip="Web agéntica = UI generativa + agentes + tools (WebMCP) + IA en el navegador.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Arquitectura de una web agéntica</p>
+          <h2 class="title">La web que <span class="hl">piensa, actúa y se adapta</span></h2>
+          <div class="flow reveal" style="grid-template-columns: 1fr 70px 1.3fr 70px 1fr">
+            <div class="node" style="--i: 0"><div class="k1">Persona</div><div class="v">Lucía</div><div class="d">Pide en lenguaje natural, toca, ajusta.</div></div>
+            <div class="arrow" style="--i: 1"><span>intención</span></div>
+            <div class="stack" style="--i: 2">
+              <div class="node blue"><div class="k1">UI generativa</div><div class="v">Rumbo</div><div class="d">Componentes de un catálogo, en streaming.</div></div>
+              <div class="node green"><div class="k1">Agentes</div><div class="v">Gemini Nano + nube</div><div class="d">Secuencial, paralelo y verificador.</div></div>
+            </div>
+            <div class="arrow" style="--i: 3"><span>tools</span></div>
+            <div class="stack" style="--i: 4">
+              <div class="node yellow"><div class="k1">WebMCP</div><div class="v">registerTool()</div><div class="d">La web se ofrece a agentes del navegador.</div></div>
+              <div class="node red"><div class="k1">APIs integradas</div><div class="v">Summarizer, Translator…</div><div class="d">IA en el dispositivo, sin costo.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 09 LOS 4 VILLANOS ═════════════ -->
+      <section data-label="Los 4 villanos" data-tip="CLS ≤ 0,1 · INP ≤ 200 ms · menos nodos nuevos por token · anuncios cortos.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// La familia del gremlin</p>
+          <h2 class="title">Cuatro villanos de la UI generativa</h2>
+          <div class="grid-4 reveal">
+            <div class="box red" style="--i: 0"><svg width="70" height="70"><use href="#gremlin" /></svg><h3>Layout Shift</h3><p>El contenido empuja lo que ya estabas leyendo.<br /><b class="mono">CLS ≤ 0,1</b></p></div>
+            <div class="box yellow" style="--i: 1"><svg width="70" height="70"><use href="#gremlin" /></svg><h3>Hilo bloqueado</h3><p>Parsear y pintar en cada token congela el scroll y los clics.<br /><b class="mono">INP ≤ 200 ms</b></p></div>
+            <div class="box blue" style="--i: 2"><svg width="70" height="70"><use href="#gremlin" /></svg><h3>DOM desechable</h3><p>Destruir y recrear todo: se pierden foco, hover y clics.<br /><b class="mono">nodos / token</b></p></div>
+            <div class="box green" style="--i: 3"><svg width="70" height="70"><use href="#gremlin" /></svg><h3>Ruido a11y</h3><p>Un lector de pantalla repitiendo "generando…" sin parar.<br /><b class="mono">anuncios</b></p></div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 10 DEMO 1 ═════════════ -->
+      <section data-label="Demo · ingenuo vs fluido" data-live="demo" data-tip="Demo: rumbo /compare → el mismo stream renderizado de dos formas.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Demo 1 · Rumbo v1 vs v2</p>
+          <div class="grid-2" style="grid-template-columns: 1.5fr 1fr; align-items: center; flex: 1">
+            <div class="clip" data-clip="compare"><video muted loop playsinline preload="none" data-src="/clips/compare.webm"></video><div class="ph"><i data-lucide="play"></i> Clip: mismo stream, dos renderers</div></div>
+            <div class="stack">
+              <h2 class="title" style="font-size: 40px">Mismo stream.<br />Dos experiencias.</h2>
+              <p class="lead" style="font-size: 22px">Fíjate en el botón, en el mapa y en el contador de nodos.</p>
+              <a class="pill blue" data-demo-link="/compare.html" target="_blank" rel="noreferrer">Abrir la demo <i data-lucide="arrow-up-right"></i></a>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 11 SECCIÓN 01 ═════════════ -->
+      <section data-label="01 Renderizado" class="section-slide" data-three="calm" data-tip="Renderizado: el modelo devuelve datos; tú reservas el espacio.">
+        <div class="three-slot"></div>
+        <div class="frame">
+          <p class="section-num">01</p>
+          <h2 class="section-title">Renderizado</h2>
+          <p class="sub">Contrato primero · espacio reservado · nada salta</p>
+        </div>
+        <div class="section-art devfest-only"><img src="/brand/arrow-up.svg" alt="" /><img src="/brand/scallop-arches.svg" alt="" style="height: 50px" /></div>
+      </section>
+
+      <!-- ═════════════ 12 CONTRATO ═════════════ -->
+      <section data-label="Contrato primero" data-tip="JSON Schema + catálogo cerrado: el modelo no inventa lugares ni HTML.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Renderizado · 1</p>
+          <h2 class="title">El modelo devuelve <span class="hl">datos</span>, no HTML</h2>
+          <div class="grid-2" style="grid-template-columns: 1.25fr 1fr">
+            <div class="code sm">
+              <div class="bar"><span>trip/agents.ts</span><span>JSON Schema</span></div>
+<pre><span class="k">export const</span> ITINERARY_SCHEMA = {
+  type: <span class="s">'object'</span>,
+  properties: {
+    <span class="mark">region:   { enum: REGION_IDS },</span>  <span class="c">// 1º: reservar</span>
+    <span class="mark">dayCount: { type: <span class="s">'integer'</span> },</span>
+    title:    { type: <span class="s">'string'</span> },
+    plan: { type: <span class="s">'array'</span>, items: {
+      placeIds: { items: { enum: PLACES.map(p =&gt; p.id) } },
+    } },
+  },
+};</pre>
+            </div>
+            <div class="stack reveal">
+              <div class="box blue" style="--i: 0"><h3>Catálogo cerrado</h3><p>Solo ids que existen: cero lugares, precios o coordenadas inventadas.</p></div>
+              <div class="box green" style="--i: 1"><h3>Orden pensado para streaming</h3><p>Primero lo que permite reservar espacio (región, número de días).</p></div>
+              <div class="box yellow" style="--i: 2"><h3>Seguro por diseño</h3><p>Sin <code>innerHTML</code> del modelo: sin XSS y con componentes accesibles.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 13 RESERVA EL ESPACIO ═════════════ -->
+      <section data-label="Reserva el espacio" data-tip="Slots con min-height, contain y line-clamp. Ojo: content-visibility:auto mientras generas puede causar shifts.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Renderizado · 2</p>
+          <h2 class="title">Reserva el espacio <span class="hl">antes</span> de que llegue</h2>
+          <div class="grid-2" style="grid-template-columns: 1fr 1.1fr">
+            <div class="code sm">
+              <div class="bar"><span>styles.css</span><span>CLS ≈ 0</span></div>
+<pre><span class="p">.day-slot</span> {
+  min-height: <span class="n">236px</span>;     <span class="c">/* altura final */</span>
+  contain: layout paint;
+}
+<span class="p">.trip-title</span> {
+  -webkit-line-clamp: <span class="n">1</span>;  <span class="c">/* crece sin empujar */</span>
+}
+<span class="p">.trip-map</span> { aspect-ratio: <span class="n">4 / 5</span>; }
+<span class="c">/* ⚠ content-visibility: auto mientras
+   generas → shifts al entrar al viewport */</span></pre>
+            </div>
+            <div class="grid-2 reveal" style="gap: 14px">
+              <div class="box red" style="--i: 0"><h3>Sin reservar</h3><p>Banner de "cargando" arriba → desaparece → todo sube. El mapa nace sin tamaño.</p><p class="mono" style="margin-top: 10px">CLS 0,056</p></div>
+              <div class="box green" style="--i: 1"><h3>Con slots</h3><p>La intención dice "3 días": pintamos 3 skeletons con la altura final.</p><p class="mono" style="margin-top: 10px">CLS 0,005</p></div>
+              <div class="box" style="--i: 2; grid-column: 1 / -1"><h3>Y lo anterior se queda</h3><p>Al refinar, la versión previa sigue visible (atenuada) hasta que llega su reemplazo. Nunca pantalla en blanco.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ PREGUNTA 1 ═════════════ -->
+      <section data-label="Pregunta 1 · Renderizado" class="q-slide q1" data-live="poll" data-q="q1">
+        <div class="frame">
+          <div class="q-head">
+            <div>
+              <p class="eyebrow">// Pregunta 1 de 3 · Renderizado · responde en tu celular</p>
+              <h2 class="q-text" data-q-text>¿Qué técnica evita que el contenido generado empuje lo que ya estás leyendo?</h2>
+            </div>
+            <div class="countdown" data-countdown><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52" /><circle class="ring" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="0" /></svg><b>30</b></div>
+          </div>
+          <div class="tiles" data-poll="q1"></div>
+          <p class="explain" data-explain hidden></p>
+          <div class="q-foot"><span><b data-total>0</b> respuestas</span><span><button class="btn-live primary" type="button" data-reveal data-presenter-only>Revelar (V)</button></span></div>
+        </div>
+      </section>
+
+      <!-- ═════════════ 14 SECCIÓN 02 ═════════════ -->
+      <section data-label="02 Streaming" class="section-slide" data-three="stream" data-tip="Streaming: muestra valor desde el primer token, sin bloquear el hilo.">
+        <div class="three-slot"></div>
+        <div class="frame">
+          <p class="section-num">02</p>
+          <h2 class="section-title">Streaming</h2>
+          <p class="sub">Parser incremental · un render por frame · Gemini Nano</p>
+        </div>
+        <div class="section-art devfest-only"><img src="/brand/arrow-up.svg" alt="" /><img src="/brand/scallop-arches.svg" alt="" style="height: 50px" /></div>
+      </section>
+
+      <!-- ═════════════ 15 PARSER INCREMENTAL ═════════════ -->
+      <section data-label="Parser incremental" data-tip="Procesa cada carácter una vez (O(n)) y emite eventos: campo, texto parcial, ítem completo.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Streaming · 1</p>
+          <h2 class="title">No esperes al <span class="hl">JSON.parse()</span> final</h2>
+          <div class="flow reveal" style="grid-template-columns: 1fr 60px 1.1fr 60px 1.2fr; margin-bottom: 18px">
+            <div class="node" style="--i: 0; position: relative"><div class="k1">tokens</div><div class="v mono" style="font-size: 17px">{"region":"sam</div><div class="tokens-run"><i></i><i></i><i></i></div></div>
+            <div class="arrow" style="--i: 1"></div>
+            <div class="node blue" style="--i: 2"><div class="k1">parser O(n)</div><div class="v">createJsonStreamParser</div><div class="d">cada carácter, una vez</div></div>
+            <div class="arrow" style="--i: 3"></div>
+            <div class="stack" style="--i: 4; gap: 6px">
+              <span class="pill green">onField("region")</span>
+              <span class="pill yellow">onPartialString("title")</span>
+              <span class="pill red">onItem("plan", 0, completo)</span>
+            </div>
+          </div>
+          <div class="code sm">
+            <div class="bar"><span>genui/json-stream.ts</span><span>~120 líneas, sin dependencias</span></div>
+<pre><span class="k">const</span> parser = <span class="f">createJsonStreamParser</span>({
+  <span class="f">onField</span>: (key, value) =&gt; store.<span class="f">field</span>(key, value),        <span class="c">// "region" → volar el mapa</span>
+  <span class="f">onPartialString</span>: (key, text) =&gt; store.<span class="f">partial</span>(key, text), <span class="c">// título letra a letra</span>
+  <span class="f">onItem</span>: (key, i, obj, complete) =&gt; store.<span class="f">item</span>(key, i, obj, complete),
+});
+<span class="k">for await</span> (<span class="k">const</span> delta <span class="k">of</span> session.<span class="f">promptStreaming</span>(prompt, { responseConstraint })) parser.<span class="f">push</span>(delta);</pre>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 16 UN RENDER POR FRAME ═════════════ -->
+      <section data-label="Un render por frame" data-tip="70 tokens/s no son 70 renders/s: agrupa por frame con rAF (y un timeout de respaldo).">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Streaming · 2</p>
+          <h2 class="title">Los tokens llegan cuando quieren. <span class="hl">Tú pintas por frame.</span></h2>
+          <div class="grid-2" style="grid-template-columns: 1.2fr 1fr">
+            <div class="code sm">
+              <div class="bar"><span>genui/doc-store.ts</span></div>
+<pre><span class="k">private</span> <span class="f">mark</span>(key) {
+  <span class="k">this</span>.changed.<span class="f">add</span>(key);
+  <span class="k">if</span> (<span class="k">this</span>.scheduled) <span class="k">return</span>;
+  <span class="k">this</span>.scheduled = <span class="k">true</span>;
+  <span class="f">requestAnimationFrame</span>(() =&gt; <span class="k">this</span>.<span class="f">flush</span>());
+  <span class="c">// rAF se pausa en pestañas ocultas:</span>
+  <span class="f">setTimeout</span>(() =&gt; <span class="k">this</span>.<span class="f">flush</span>(), <span class="n">60</span>);
+}
+<span class="c">// + scheduler.yield() si llevas &gt; 40 ms trabajando</span></pre>
+            </div>
+            <div class="panel" style="place-items: center; min-height: 300px">
+              <span class="cap">Lección aprendida en vivo</span>
+              <div class="bubble" style="top: 50px; left: 20px; max-width: 300px">¿startTransition en cada token? Cada transición reinicia la anterior… ¡y no pinto nada hasta el final!</div>
+              <svg class="who" style="margin-top: 90px"><use href="#nano-sweat" /></svg>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 17 GEMINI NANO ═════════════ -->
+      <section data-label="Gemini Nano · Prompt API" data-tip="Prompt API estable desde Chrome 148: sin red, sin costo, sin enviar datos.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Streaming · 3 · Chrome 148+</p>
+          <h2 class="title">Gemini Nano: el modelo vive <span class="hl">en el navegador</span></h2>
+          <div class="grid-2" style="grid-template-columns: 1.35fr 1fr">
+            <div class="code sm">
+              <div class="bar"><span>genui/providers.ts</span><span>Prompt API</span></div>
+<pre><span class="k">const</span> base = <span class="k">await</span> LanguageModel.<span class="f">create</span>({
+  initialPrompts: [{ role: <span class="s">'system'</span>, content: SYSTEM }],
+  expectedOutputs: [{ type: <span class="s">'text'</span>, languages: [<span class="s">'es'</span>] }],
+});
+<span class="c">// clone(): reutiliza el system prompt ya procesado</span>
+<span class="k">const</span> session = <span class="k">await</span> base.<span class="f">clone</span>({ signal });
+<span class="k">for await</span> (<span class="k">const</span> delta <span class="k">of</span> session.<span class="f">promptStreaming</span>(prompt, {
+  <span class="mark">responseConstraint: ITINERARY_SCHEMA,</span> signal,
+})) <span class="k">yield</span> delta;</pre>
+            </div>
+            <div class="stack reveal">
+              <div class="box green" style="--i: 0"><h3 class="ic"><i data-lucide="zap"></i> Latencia</h3><p>Sin viaje de red: el primer token llega antes.</p></div>
+              <div class="box blue" style="--i: 1"><h3 class="ic"><i data-lucide="lock"></i> Privacidad</h3><p>El pedido de Lucía nunca sale del dispositivo.</p></div>
+              <div class="box yellow" style="--i: 2"><h3 class="ic"><i data-lucide="wallet"></i> Costo cero</h3><p>Sin tokens facturados. Ideal para sugerencias en tiempo real.</p></div>
+              <div class="box" style="--i: 3"><h3>Trade-offs</h3><p>Escritorio, descarga inicial y contexto más pequeño → plan híbrido.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 19 SECCIÓN 03 ═════════════ -->
+      <section data-label="03 Reutilizar el DOM" class="section-slide" data-three="calm" data-tip="Reutilizar el DOM: claves estables, mover en vez de recrear.">
+        <div class="three-slot"></div>
+        <div class="frame">
+          <p class="section-num">03</p>
+          <h2 class="section-title">Reutilizar<br />el DOM</h2>
+          <p class="sub">Claves estables · parchear en vez de recrear · View Transitions</p>
+        </div>
+        <div class="section-art devfest-only"><img src="/brand/arrow-up.svg" alt="" /><img src="/brand/scallop-arches.svg" alt="" style="height: 50px" /></div>
+      </section>
+
+      <!-- ═════════════ 20 NÚMEROS ═════════════ -->
+      <section data-label="17.913 vs 156" data-tip="Mismo itinerario: 17.913 nodos creados con innerHTML vs 156 con claves estables.">
+        <div class="frame center">
+          <p class="eyebrow">// Medido en /compare con el mismo stream</p>
+          <div class="vs-numbers reveal">
+            <div style="--i: 0"><div class="n">17.913</div><div class="label">nodos creados · v1 ingenua</div></div>
+            <div class="vs" style="--i: 1">vs</div>
+            <div style="--i: 2"><div class="n"><span class="hl">156</span></div><div class="label">nodos creados · v2 fluida</div></div>
+          </div>
+          <p class="lead" style="margin-top: 34px">Mismo modelo, mismo texto, mismo React. <b>¿Qué cambió?</b> Lo vemos en el siguiente slide… y luego te lo pregunto.</p>
+        </div>
+      </section>
+
+      <!-- ═════════════ 21 KEYS + VIEW TRANSITIONS ═════════════ -->
+      <section data-label="Claves estables y View Transitions" data-tip="Clave por id (lugar, hospedaje), no por posición. Lo que cambia de lugar se anima con View Transitions.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Reutilizar el DOM</p>
+          <h2 class="title">Mover, no recrear</h2>
+          <div class="grid-2">
+            <div class="code sm">
+              <div class="bar"><span>ui/TripFluid.tsx</span><span>React 19</span></div>
+<pre>{day.placeIds.<span class="f">map</span>(id =&gt; (
+  <span class="c">// la clave es el LUGAR, no su posición</span>
+  &lt;<span class="f">PlaceRow</span> <span class="mark">key={id}</span> id={id}
+    style={{ viewTransitionName: <span class="s">`place-${id}`</span> }} /&gt;
+))}
+
+<span class="c">// cambios estructurales → View Transition</span>
+document.<span class="f">startViewTransition</span>(() =&gt; <span class="f">flushSync</span>(apply));</pre>
+            </div>
+            <div class="stack reveal">
+              <div class="box blue" style="--i: 0"><h3 class="ic"><i data-lucide="map"></i> El mapa no se recrea</h3><p>Leaflet se crea una vez; los marcadores se agregan o quitan por id.</p></div>
+              <div class="box green" style="--i: 1"><h3 class="ic"><i data-lucide="rotate-ccw"></i> Refinar reutiliza</h3><p>"Agrega un día de playa": los lugares que siguen son los mismos nodos.</p></div>
+              <div class="box yellow" style="--i: 2"><h3 class="ic"><i data-lucide="brain"></i> memo + suscripción por ítem</h3><p>Si llega texto del título, las tarjetas de hospedaje ni se enteran.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ PREGUNTA 2 ═════════════ -->
+      <section data-label="Pregunta 2 · Reutilizar el DOM" class="q-slide q2" data-live="poll" data-q="q2">
+        <div class="frame">
+          <div class="q-head">
+            <div>
+              <p class="eyebrow">// Pregunta 2 de 3 · Reutilizar el DOM</p>
+              <h2 class="q-text" data-q-text>Mismo stream: ¿por qué la v1 creó 17.913 nodos y la v2 solo 156?</h2>
+            </div>
+            <div class="countdown" data-countdown><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52" /><circle class="ring" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="0" /></svg><b>30</b></div>
+          </div>
+          <div class="tiles" data-poll="q2"></div>
+          <p class="explain" data-explain hidden></p>
+          <div class="q-foot"><span><b data-total>0</b> respuestas</span><span><button class="btn-live primary" type="button" data-reveal data-presenter-only>Revelar (V)</button></span></div>
+        </div>
+      </section>
+
+      <!-- ═════════════ 22 SECCIÓN 04 ═════════════ -->
+      <section data-label="04 Estado" class="section-slide" data-three="stream" data-tip="Estado: varios streams, un store por agente, lo derivado lo calcula el código.">
+        <div class="three-slot"></div>
+        <div class="frame">
+          <p class="section-num">04</p>
+          <h2 class="section-title">Estado</h2>
+          <p class="sub">Un store por agente · borrador vs confirmado · derivado en código</p>
+        </div>
+        <div class="section-art devfest-only"><img src="/brand/arrow-up.svg" alt="" /><img src="/brand/scallop-arches.svg" alt="" style="height: 50px" /></div>
+      </section>
+
+      <!-- ═════════════ 23 STORE ═════════════ -->
+      <section data-label="Store por agente" data-tip="fields, partial, lists, previous. La IA decide; el presupuesto lo suma el código.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Estado · 1</p>
+          <h2 class="title">Un store por agente, <span class="hl">suscripciones granulares</span></h2>
+          <div class="grid-2" style="grid-template-columns: 1.1fr 1fr">
+            <div class="code sm">
+              <div class="bar"><span>genui/doc-store.ts</span></div>
+<pre><span class="k">interface</span> <span class="f">DocState</span> {
+  status: <span class="s">'thinking'</span> | <span class="s">'streaming'</span> | <span class="s">'done'</span>;
+  fields:   {...}  <span class="c">// completos: region, dayCount</span>
+  partial:  {...}  <span class="c">// a medio escribir: title</span>
+  lists:    {...}  <span class="c">// plan[i] parcial o completo</span>
+  <span class="mark">previous: {...}  // lo anterior, hasta el reemplazo</span>
+}
+<span class="c">// cada tarjeta lee SOLO su ítem</span>
+<span class="k">const</span> item = <span class="f">useSyncExternalStore</span>(store.subscribe,
+  () =&gt; store.<span class="f">item</span>(<span class="s">'plan'</span>, index));</pre>
+            </div>
+            <div class="stack reveal">
+              <div class="box green" style="--i: 0"><h3>Borrador vs confirmado</h3><p>Lo parcial se pinta; solo lo completo se guarda o vuelve al modelo.</p></div>
+              <div class="box yellow" style="--i: 1"><h3>Derivado en código</h3><p>Presupuesto = hospedaje × noches + actividades + transporte + comida. <b>La IA no suma.</b></p></div>
+              <div class="box blue" style="--i: 2"><h3>Cancelable</h3><p>AbortController en cada agente; un nuevo contexto cancela el anterior.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 24 WORKFLOW ═════════════ -->
+      <section data-label="Workflow agéntico" data-tip="Secuencial → paralelo → verificador con bucle → síntesis (patrón ADK en el navegador).">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Estado · 2 · patrón ADK en el navegador</p>
+          <h2 class="title">Secuencial, <span class="hl">paralelo</span> y un verificador que corrige</h2>
+          <div class="flow reveal" style="grid-template-columns: 1fr 50px 1.6fr 50px 1.1fr 50px 1fr">
+            <div class="node" style="--i: 0"><div class="k1">secuencial</div><div class="v">Intención</div><div class="d">Nano: región, intereses, ritmo</div></div>
+            <div class="arrow" style="--i: 1"></div>
+            <div class="stack" style="--i: 2; gap: 8px">
+              <div class="k1 mono muted" style="font-size: 13px">PARALELO · STREAMING</div>
+              <div class="node blue"><div class="v">Itinerario</div><div class="d">días y lugares</div></div>
+              <div class="node green"><div class="v">Hospedaje</div><div class="d">2–3 opciones</div></div>
+            </div>
+            <div class="arrow" style="--i: 3"></div>
+            <div class="node red" style="--i: 4"><div class="k1">secuencial + bucle</div><div class="v">Verificador</div><div class="d">reglas en código; si falla, solo ese agente regenera</div></div>
+            <div class="arrow" style="--i: 5"></div>
+            <div class="node yellow" style="--i: 6"><div class="k1">secuencial</div><div class="v">Síntesis</div><div class="d">presupuesto en código</div></div>
+          </div>
+          <p class="lead" style="margin-top: 22px; font-size: 22px">Truco: la intención da el número de días <b>antes</b> de que el itinerario escriba una palabra → reservamos los slots.</p>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 25 VIÑETA 2 ═════════════ -->
+      <section data-label="La IA genérica" data-tip="La IA propone, el código verifica, la persona decide.">
+        <div class="frame">
+          <p class="eyebrow">// Capítulo 2 · "Lo más barato posible"</p>
+          <div class="comic reveal">
+            <div class="panel" style="--i: 0">
+              <span class="cap">Lucía, ahorrando</span>
+              <div class="bubble" style="top: 60px; left: 20px">Quiero lo más barato en Santo Domingo</div>
+              <svg class="who"><use href="#lucia-happy" /></svg>
+            </div>
+            <div class="panel" style="--i: 1">
+              <span class="cap">La IA genérica</span>
+              <div class="phone" style="gap: 6px"><b>Habitaciones La Ganga</b><span>$12 / noche</span><span>★ 2,1 · 9 reseñas</span><div class="btn" style="background: var(--ht-red)">¡Reservar!</div></div>
+              <svg class="who sm wiggle" style="justify-self: end"><use href="#gremlin" /></svg>
+              <div class="bubble right" style="bottom: 130px; right: 14px">¡Gangaaa!</div>
+            </div>
+            <div class="panel" style="--i: 2">
+              <span class="cap">El verificador</span>
+              <div class="bubble" style="top: 50px; left: 14px; max-width: 280px">Sin licencia, seguridad 1,8/5. Te propongo Hostal Las Damas: $45 y 4,4★.</div>
+              <svg class="who" style="justify-self: end; width: 140px"><use href="#nano-shield" /></svg>
+              <svg class="who sm" style="position: absolute; left: 10px; bottom: 14px"><use href="#lucia-happy" /></svg>
+            </div>
+          </div>
+          <p class="comic-note">¿Qué debería hacer Rumbo? <b>Responde en tu celular →</b></p>
+        </div>
+      </section>
+
+      <!-- ═════════════ PREGUNTA 3 ═════════════ -->
+      <section data-label="Pregunta 3 · Agentes responsables" class="q-slide q3" data-live="poll" data-q="q3">
+        <div class="frame">
+          <div class="q-head">
+            <div>
+              <p class="eyebrow">// Pregunta 3 de 3 · Agentes y estado · ¡última oportunidad!</p>
+              <h2 class="q-text" data-q-text>La IA sugiere un hostal de $12, 2,1★ y sin licencia. ¿Qué hace una web agéntica responsable?</h2>
+            </div>
+            <div class="countdown" data-countdown><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52" /><circle class="ring" cx="60" cy="60" r="52" stroke-dasharray="327" stroke-dashoffset="0" /></svg><b>30</b></div>
+          </div>
+          <div class="tiles" data-poll="q3"></div>
+          <p class="explain" data-explain hidden></p>
+          <div class="q-foot"><span><b data-total>0</b> respuestas</span><span><button class="btn-live primary" type="button" data-reveal data-presenter-only>Revelar (V)</button></span></div>
+        </div>
+      </section>
+
+      <!-- ═════════════ 26 ACCESIBILIDAD ═════════════ -->
+      <section data-label="Accesible mientras genera" data-tip="aria-busy en la región, anuncios cortos y espaciados, nunca robar el foco, prefers-reduced-motion.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Accesible mientras genera</p>
+          <h2 class="title">Que el lector de pantalla <span class="hl">no repita todo</span></h2>
+          <div class="grid-2" style="grid-template-columns: 1fr 1.1fr">
+            <div class="stack reveal">
+              <div class="box red" style="--i: 0"><h3>v1: aria-live sobre todo</h3><p>"Generando… Día 1… Día 1 Llegada… Día 1 Llegada y…" → cada token es un anuncio.</p></div>
+              <div class="box green" style="--i: 1"><h3>v2: anuncios con intención</h3><p>"Preparando 3 días" → "Hospedaje listo" → "Listo: verificado". Espaciados ≥ 2,5 s.</p></div>
+              <div class="box" style="--i: 2"><h3>Y además</h3><p>aria-busy por región · el foco nunca se mueve solo · animaciones solo con transform/opacity · reduced-motion apaga View Transitions.</p></div>
+            </div>
+            <div class="code sm">
+              <div class="bar"><span>genui/a11y.ts</span></div>
+<pre><span class="k">export function</span> <span class="f">createAnnouncer</span>(region, minGapMs = <span class="n">2500</span>) {
+  region.<span class="f">setAttribute</span>(<span class="s">'aria-live'</span>, <span class="s">'polite'</span>);
+  <span class="k">return</span> {
+    <span class="f">say</span>(message, force = <span class="k">false</span>) {
+      <span class="c">// pocos, cortos y en momentos clave</span>
+      <span class="k">if</span> (force || <span class="f">elapsed</span>() &gt;= minGapMs) <span class="f">write</span>(message);
+      <span class="k">else</span> <span class="f">schedule</span>(message);
+    },
+  };
+}
+&lt;ol aria-busy={streaming}&gt;…&lt;/ol&gt;</pre>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 27 WEBMCP ═════════════ -->
+      <section data-label="WebMCP" data-tip="WebMCP: la web registra tools para agentes del navegador, con confirmación humana para lo sensible.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Web agéntica · WebMCP (origin trial desde Chrome 149)</p>
+          <h2 class="title">Rumbo también se ofrece <span class="hl">a otros agentes</span></h2>
+          <div class="grid-2" style="grid-template-columns: 1.3fr 1fr">
+            <div class="code sm">
+              <div class="bar"><span>webmcp/tools.ts</span><span>document.modelContext</span></div>
+<pre>modelContext.<span class="f">registerTool</span>({
+  name: <span class="s">'plan_trip'</span>,
+  description: <span class="s">'Planifica una escapada por RD…'</span>,
+  inputSchema: { properties: { request, days, people, month } },
+  <span class="k">async</span> <span class="f">execute</span>(args) {
+    <span class="k">await</span> actions.<span class="f">plan</span>(args); <span class="c">// ¡la MISMA UI se arma en vivo!</span>
+    <span class="k">return</span> { content: [{ type: <span class="s">'text'</span>, text: itinerario }] };
+  },
+});
+<span class="c">// select_lodging → actions.confirm(): la persona decide</span></pre>
+            </div>
+            <div class="stack reveal">
+              <div class="box yellow" style="--i: 0"><h3>6 tools</h3><p class="mono" style="font-size: 15px">plan_trip · refine_trip · get_itinerary · select_lodging · set_travelers · ask_travel_assistant</p></div>
+              <div class="box green" style="--i: 1"><h3>La UI es la misma</h3><p>Si un agente planifica, Lucía ve el workflow y el streaming igual que si lo hiciera ella.</p></div>
+              <div class="box red" style="--i: 2"><h3>Puertas humanas</h3><p>Elegir hospedaje por un agente → diálogo de confirmación.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 28 APIS INTEGRADAS ═════════════ -->
+      <section data-label="APIs integradas y panel contextual" data-tip="Prompt, Summarizer, Translator y Rewriter: IA en el dispositivo, sin costo.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Panel contextual · APIs de IA integradas en Chrome</p>
+          <h2 class="title">Sugerencias que cambian <span class="hl">mientras tocas</span></h2>
+          <div class="grid-4 reveal">
+            <div class="box blue" style="--i: 0"><h3>Prompt API</h3><p>Tocas un día, un lugar o un hospedaje → 3 sugerencias de <i>ese</i> contexto.</p></div>
+            <div class="box green" style="--i: 1"><h3>Summarizer</h3><p>"Resumen para WhatsApp" del viaje, en streaming.</p></div>
+            <div class="box yellow" style="--i: 2"><h3>Translator</h3><p>El itinerario en inglés para quien viaja contigo.</p></div>
+            <div class="box red" style="--i: 3"><h3>Rewriter</h3><p>Mismo mensaje, tono más casual.</p></div>
+          </div>
+          <div class="code sm" style="margin-top: 20px">
+            <div class="bar"><span>ui/ContextPanel.tsx</span><span>debounce + AbortController</span></div>
+<pre><span class="c">// Cada nuevo contexto CANCELA la sugerencia anterior y espera 350 ms de calma</span>
+abort.current?.<span class="f">abort</span>(); <span class="k">const</span> ctrl = <span class="k">new</span> <span class="f">AbortController</span>();
+<span class="k">const</span> { stream, native } = <span class="k">await</span> <span class="f">promptStream</span>(SYSTEM, <span class="f">describe</span>(selection), fallback, ctrl.signal);</pre>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 29 SECCIÓN 05 ═════════════ -->
+      <section data-label="05 Debug con IA" class="section-slide" data-three="calm" data-tip="Debug: pistas propias en Performance, AI assistance y DevTools for agents.">
+        <div class="three-slot"></div>
+        <div class="frame">
+          <p class="section-num">05</p>
+          <h2 class="section-title">Debug con IA</h2>
+          <p class="sub">Chrome DevTools: pistas propias · AI assistance · DevTools for agents</p>
+        </div>
+        <div class="section-art devfest-only"><img src="/brand/arrow-up.svg" alt="" /><img src="/brand/scallop-arches.svg" alt="" style="height: 50px" /></div>
+      </section>
+
+      <!-- ═════════════ 30 DEVTOOLS ═════════════ -->
+      <section data-label="DevTools con IA" data-tip="performance.measure con detail.devtools → tus agentes como pistas en el panel Performance.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Chrome DevTools · 2026</p>
+          <h2 class="title">Tus agentes, <span class="hl">dentro</span> del panel Performance</h2>
+          <div class="grid-2" style="grid-template-columns: 1.15fr 1fr">
+            <div class="code sm">
+              <div class="bar"><span>genui/perf-tracks.ts</span><span>Extensibility API</span></div>
+<pre>performance.<span class="f">measure</span>(<span class="s">'Hospedaje'</span>, { start, end,
+  detail: { devtools: {
+    dataType: <span class="s">'track-entry'</span>,
+    track: <span class="s">'Hospedaje'</span>,
+    trackGroup: <span class="s">'Rumbo · agentes'</span>,
+    color: <span class="s">'secondary'</span>,
+  } },
+});</pre>
+            </div>
+            <div class="stack reveal">
+              <div class="box blue" style="--i: 0"><h3>1 · Graba un trace</h3><p>Los agentes aparecen junto a frames, long tasks y layout shifts.</p></div>
+              <div class="box green" style="--i: 1"><h3>2 · AI assistance</h3><p>Ahora agéntica: "¿por qué hay layout shift aquí?" → graba, analiza y explica.</p></div>
+              <div class="box yellow" style="--i: 2"><h3>3 · DevTools for agents</h3><p class="mono" style="font-size: 14px">performance_start_trace → ?render=naive&amp;autorun=1</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 31 DEMO 2 ═════════════ -->
+      <section data-label="Demo · Rumbo completo" data-live="demo" data-tip="Demo: Rumbo completo → workflow, verificador, panel contextual y WebMCP.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Demo 2 · Rumbo v4</p>
+          <div class="grid-2" style="grid-template-columns: 1.5fr 1fr; align-items: center; flex: 1">
+            <div class="clip" data-clip="rumbo"><video muted loop playsinline preload="none" data-src="/clips/rumbo-trap.webm"></video><div class="ph"><i data-lucide="play"></i> Clip: el verificador atrapa "La Ganga"</div></div>
+            <div class="stack">
+              <h2 class="title" style="font-size: 40px">Agentes, verificador, panel contextual y WebMCP</h2>
+              <p class="lead" style="font-size: 21px">1. "Lo más barato en Santo Domingo"<br />2. Toca un día → sugerencias<br />3. Refinar: + día de playa<br />4. Un agente llama a <span class="mono">plan_trip()</span></p>
+              <a class="pill green" data-demo-link="/" target="_blank" rel="noreferrer">Abrir Rumbo <i data-lucide="arrow-up-right"></i></a>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 33 LOCAL PRIMERO ═════════════ -->
+      <section data-label="Local primero, nube de respaldo" data-tip="Gemini Nano si el equipo lo tiene; Gemini API si no; simulado si no hay red. Mismo schema, mismo parser.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// La respuesta (depende… pero así lo hice)</p>
+          <h2 class="title">Local primero, <span class="hl">nube de respaldo</span></h2>
+          <div class="grid-2" style="grid-template-columns: 1.35fr 1fr">
+            <div class="code sm">
+              <div class="bar"><span>genui/providers.ts</span><span>~20 líneas</span></div>
+<pre><span class="k">export async function</span> <span class="f">resolveEngine</span>() {
+  <span class="k">const</span> a = <span class="k">await</span> LanguageModel?.<span class="f">availability</span>();
+  <span class="k">if</span> (a === <span class="s">'available'</span>) <span class="k">return</span> <span class="s">'nano'</span>;   <span class="c">// gratis, privado</span>
+  <span class="k">if</span> (GEMINI_API_KEY) <span class="k">return</span> <span class="s">'cloud'</span>;     <span class="c">// Gemini API</span>
+  <span class="k">return</span> <span class="s">'mock'</span>;                          <span class="c">// plan B sin red</span>
+}
+<span class="c">// nube: el MISMO schema, en streaming (SSE)</span>
+generationConfig: { responseMimeType: <span class="s">'application/json'</span>,
+  <span class="mark">responseJsonSchema: ITINERARY_SCHEMA</span> }</pre>
+            </div>
+            <div class="stack reveal">
+              <div class="box green" style="--i: 0"><h3>Mismo contrato</h3><p>Un JSON Schema para Nano y para la nube: el parser y la UI no cambian.</p></div>
+              <div class="box blue" style="--i: 1"><h3>Key restringida</h3><p>Si va en el front: solo Generative Language API y solo tus dominios.</p></div>
+              <div class="box yellow" style="--i: 2"><h3>Siempre un plan B</h3><p>Modo simulado determinista: la demo funciona sin wifi.</p></div>
+            </div>
+          </div>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 34 MURO DE CARDS ═════════════ -->
+      <section data-label="Muro de cards" data-live="cards" data-tip="Tu card se generó en tu celular: la foto nunca salió del dispositivo.">
+        <div class="frame">
+          <div class="q-head" style="align-items: center; margin-bottom: 14px">
+            <div>
+              <p class="eyebrow">// Ustedes también generaron UI</p>
+              <h2 class="title" style="margin: 0">El muro de la comunidad · <span data-count="cards">0</span> cards</h2>
+            </div>
+            <p class="mono small muted" style="max-width: 340px; margin: 0">Foto → cómic en tu celular (canvas). $0 y la foto nunca sale del dispositivo.</p>
+          </div>
+          <div class="wall" data-wall></div>
+        </div>
+      </section>
+
+      <!-- ═════════════ 35 CHECKLIST ═════════════ -->
+      <section data-label="Checklist" data-tip="Llévate el checklist: está en el README del repo.">
+        <div class="frame card-frame">
+          <p class="eyebrow">// Para llevar</p>
+          <h2 class="title">10 reglas para una <span class="hl">IA rápida y una UI fluida</span></h2>
+          <ol class="checklist">
+            <li><span><b>Datos, no HTML:</b> catálogo de componentes + JSON Schema.</span></li>
+            <li><span><b>Reserva el espacio</b> antes del contenido (slots, aspect-ratio, line-clamp).</span></li>
+            <li><span><b>Parser incremental:</b> cada carácter una vez.</span></li>
+            <li><span><b>Un render por frame:</b> rAF + respaldo; cede el hilo con scheduler.yield().</span></li>
+            <li><span><b>Claves estables</b> por id; mueve con View Transitions.</span></li>
+            <li><span><b>Nunca pantalla en blanco:</b> lo anterior se queda hasta su reemplazo.</span></li>
+            <li><span><b>La IA decide, el código calcula</b> (y verifica).</span></li>
+            <li><span><b>Anuncios con intención:</b> aria-busy y mensajes espaciados.</span></li>
+            <li><span><b>Local primero:</b> Gemini Nano + nube de respaldo + modo simulado.</span></li>
+            <li><span><b>Mide con DevTools:</b> pistas propias, AI assistance y agentes.</span></li>
+          </ol>
+        </div>
+        <div class="notch"><img src="/brand/logo-gdg-stacked.svg" alt="Google Developer Groups" /></div>
+      </section>
+
+      <!-- ═════════════ 36 PODIO ═════════════ -->
+      <section data-label="Podio" class="q-slide q1" data-live="podium" data-tip="Si ganaste, muestra el código de tu celular.">
+        <div class="frame">
+          <p class="eyebrow">// Puntos por responder rápido + like + card</p>
+          <h2 class="title ic"><i data-lucide="trophy"></i> Podio</h2>
+          <div class="podium" data-podium></div>
+          <div class="rest" data-rest></div>
+          <p class="mono small" style="margin-top: 12px">Ganador/a: acércate y muestra el <b>código</b> que aparece en tu celular.</p>
+        </div>
+      </section>
+
+      <!-- ═════════════ 37 GRACIAS ═════════════ -->
+      <section data-label="Gracias" class="cover" data-three="orbit" data-live="end" data-tip="¡Gracias! Repo: github.com/vanessamarely/fluid-generative-ui">
+        <div class="three-slot"></div>
+        <div class="frame" style="justify-content: center; pointer-events: auto">
+          <p class="eyebrow">// Gracias, DevFest Santo Domingo</p>
+          <h2 class="cover-title" style="font-size: 88px"><span>¿Preguntas?</span></h2>
+          <div class="grid-2" style="grid-template-columns: auto auto; justify-content: start; gap: 24px; margin-top: 28px">
+            <div class="qr-card sm"><div data-qr="repo"></div><strong>Repo</strong><span>fluid-generative-ui</span></div>
+            <div class="stack" style="align-content: center">
+              <span class="pill">GitHub · <b>vanessamarely</b></span>
+              <span class="pill">Instagram · <b>@vanessamarelycode</b></span>
+              <span class="pill">YouTube · <b>vanessamarely</b></span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </deck-stage>
+
+    <div class="reactions" aria-hidden="true"></div>
+    <span class="presenter-badge" hidden>● EN VIVO</span>
+    <div class="deck-menu">
+      <button class="deck-menu-btn" type="button" aria-expanded="false" aria-controls="deck-menu-panel" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+      <div class="deck-menu-panel" id="deck-menu-panel" hidden></div>
+    </div>
+
+    <script src="/deck-stage.js"></script>
+    <script type="module" src="/src/deck/main.ts"></script>
+  </body>
+</html>

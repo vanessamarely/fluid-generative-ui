@@ -1,4 +1,5 @@
 // Consola WebMCP + Laboratorio de rendimiento (para la charla).
+import { X } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { BUILTIN_APIS, availabilityOf } from '../builtin/ai';
 import { globalMetrics, type PanelMetrics } from '../genui/metrics';
@@ -88,7 +89,7 @@ export function LabPanel({
         <strong>Laboratorio</strong>
         <span className="mono">tecla D</span>
         <button className="btn small ghost" type="button" onClick={onClose} aria-label="Cerrar laboratorio">
-          ✕
+          <X size={16} aria-hidden="true" />
         </button>
       </header>
       <div className="lab-row">
@@ -108,14 +109,12 @@ export function LabPanel({
       <label className="lab-row">
         <span className="mono">motor</span>
         <select value={settings.engine} onChange={(e) => onChange({ engine: e.target.value as ProviderChoice })}>
-          <option value="auto">Auto (Nano → nube → simulado)</option>
-          <option value="nano">Gemini Nano</option>
-          <option value="hybrid">Firebase híbrido</option>
-          <option value="cloud">Nube</option>
-          <option value="mock">Simulado</option>
+          <option value="auto">Auto · local primero</option>
+          <option value="nano">Dispositivo · Gemini Nano</option>
+          <option value="cloud">Nube · Gemini API</option>
         </select>
       </label>
-      {settings.engine === 'mock' && (
+      {engineLabel.startsWith('Simulado') && (
         <label className="lab-row">
           <span className="mono">{settings.speed} tok/s</span>
           <input type="range" min={10} max={240} step={10} value={settings.speed} onChange={(e) => onChange({ speed: Number(e.target.value) })} />

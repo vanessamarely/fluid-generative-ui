@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "firebase": "^12.19.0",
+    "lucide": "^1.52.0",
     "qrcode": "^1.5.4",
     "three": "^0.186.1"
   },

@@ -1,4 +1,5 @@
 // Grafo del workflow agéntico: secuencial → paralelo → secuencial (+ bucle del verificador).
+import { CircleCheck, OctagonX, RotateCcw, TriangleAlert } from 'lucide-react';
 import type { NodeId, NodeStatus } from '../trip/workflow';
 import type { Check } from '../trip/verify';
 import type { Budget } from '../trip/derive';
@@ -28,7 +29,7 @@ const STATUS_TEXT: Record<NodeStatus, string> = {
   done: 'listo',
   error: 'error',
   skipped: 'reutilizado',
-  loop: 'corrigiendo ↺',
+  loop: 'corrigiendo',
 };
 
 function Node({ id, node }: { id: NodeId; node: Nodes[NodeId] }) {
@@ -80,7 +81,7 @@ export function ChecksPanel({ checks, round }: { checks: Check[]; round: number 
         {checks.map((c) => (
           <li key={c.id} data-level={c.level}>
             <span className="check-icon" aria-hidden="true">
-              {c.level === 'ok' ? '✓' : c.level === 'warn' ? '⚠' : c.level === 'fixed' ? '↺' : '⛔'}
+              {c.level === 'ok' ? <CircleCheck size={18} /> : c.level === 'warn' ? <TriangleAlert size={18} /> : c.level === 'fixed' ? <RotateCcw size={18} /> : <OctagonX size={18} />}
             </span>
             <span>
               <strong>{c.level === 'fixed' ? `Corregido: ${c.title}` : c.title}</strong> {c.detail}

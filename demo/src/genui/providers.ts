@@ -1,10 +1,10 @@
 // Proveedores de generación: todos exponen un stream de texto (deltas).
-//   nano     → Prompt API de Chrome (Gemini Nano en el dispositivo; estable desde Chrome 148)
-//   firebase → Firebase AI Logic híbrido (Nano si está, Gemini en la nube si no)
-//   mock     → texto pregenerado con latencia de "tokens" (sin red, siempre disponible)
-import { hasFirebase, TEXT_MODEL } from '../shared/config';
+//   nano  → Prompt API de Chrome (Gemini Nano en el dispositivo; estable desde Chrome 148)
+//   cloud → Gemini API (respaldo cuando el equipo no tiene Nano)
+//   mock  → red de seguridad automática: sin red ni Nano la demo sigue funcionando
+import { GEMINI_API_KEY, GEMINI_MODEL, hasCloud } from '../shared/config';
 
-export type ProviderId = 'nano' | 'firebase' | 'mock';
+export type ProviderId = 'nano' | 'cloud' | 'mock';
 
 export interface AgentSpec {
   system: string;
@@ -86,35 +86,39 @@ export function nanoProvider(agent: AgentSpec): GenProvider {
   };
 }
 
-// ── Firebase AI Logic (híbrido) ──────────────────────────────────────────
-export function firebaseProvider(agent: AgentSpec, mode: 'prefer_on_device' | 'only_in_cloud' = 'prefer_on_device'): GenProvider {
+// ── Gemini API en la nube (respaldo) ─────────────────────────────────────
+/** Streaming por SSE contra la Gemini API, con el MISMO JSON Schema que usa Nano. */
+export function cloudProvider(agent: AgentSpec): GenProvider {
   return {
-    id: 'firebase',
-    label: mode === 'only_in_cloud' ? `Gemini en la nube · ${TEXT_MODEL}` : 'Firebase AI Logic · híbrido',
-    async *stream({ prompt, signal, onStatus }) {
-      const [{ getAI, getGenerativeModel, GoogleAIBackend }, { getFirebaseApp }] = await Promise.all([import('firebase/ai'), import('../shared/firebase')]);
-      const ai = getAI(await getFirebaseApp(), { backend: new GoogleAIBackend() });
-      const model = getGenerativeModel(ai, {
-        mode,
-        onDeviceParams: {
-          createOptions: { ...LANG_OPTS, initialPrompts: [{ role: 'system', content: agent.system }] } as never,
-          promptOptions: { responseConstraint: agent.schema },
-        },
-        inCloudParams: {
-          model: TEXT_MODEL,
-          systemInstruction: agent.system,
-          generationConfig: { responseMimeType: 'application/json', responseJsonSchema: agent.schema as never, temperature: 0.4 },
-        },
+    id: 'cloud',
+    label: `Gemini API · ${GEMINI_MODEL}`,
+    async *stream({ prompt, signal }) {
+      if (!GEMINI_API_KEY) throw new Error('Falta VITE_GEMINI_API_KEY');
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`, {
+        method: 'POST',
+        signal,
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: agent.system }] },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: 'application/json', responseJsonSchema: agent.schema, temperature: 0.4 },
+        }),
       });
-      const result = await model.generateContentStream(prompt, { signal } as never);
-      let announced = false;
-      for await (const chunk of result.stream) {
-        if (signal.aborted) return;
-        if (!announced && chunk.inferenceSource) {
-          onStatus?.(chunk.inferenceSource === 'on_device' ? 'Generando en el dispositivo' : 'Generando en la nube');
-          announced = true;
+      if (!res.ok || !res.body) throw new Error(`Gemini API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let buffer = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        let nl: number;
+        while ((nl = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line.startsWith('data:')) continue;
+          const json = JSON.parse(line.slice(5));
+          for (const part of json.candidates?.[0]?.content?.parts ?? []) if (part.text) yield part.text as string;
         }
-        yield chunk.text();
       }
     },
   };
@@ -150,12 +154,15 @@ export function sleep(ms: number, signal?: AbortSignal) {
   });
 }
 
-export type ProviderChoice = 'auto' | 'nano' | 'hybrid' | 'cloud' | 'mock';
+export type ProviderChoice = 'auto' | 'nano' | 'cloud';
+export type Engine = 'nano' | 'cloud' | 'mock';
 
-/** Resuelve qué motor usar: Nano → Firebase híbrido → simulado. */
-export async function resolveEngine(choice: ProviderChoice): Promise<'nano' | 'hybrid' | 'cloud' | 'mock'> {
-  if (choice !== 'auto') return choice;
+/** Local primero, nube de respaldo; si no hay ninguno, el simulado (plan B del escenario). */
+export async function resolveEngine(choice: ProviderChoice | 'mock'): Promise<Engine> {
+  if (choice === 'mock') return 'mock';
   const a = await nanoAvailability();
-  if (a === 'available' || a === 'downloadable') return 'nano';
-  return hasFirebase ? 'hybrid' : 'mock';
+  const nano = a === 'available' || a === 'downloadable';
+  if (choice === 'nano') return nano ? 'nano' : hasCloud ? 'cloud' : 'mock';
+  if (choice === 'cloud') return hasCloud ? 'cloud' : nano ? 'nano' : 'mock';
+  return nano ? 'nano' : hasCloud ? 'cloud' : 'mock';
 }

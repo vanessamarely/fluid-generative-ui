@@ -11,10 +11,10 @@ export const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID as string | undefined,
 };
 
-export const hasFirebase = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+/** ?local fuerza el modo ensayo (BroadcastChannel) aunque haya config de Firebase. */
+export const hasFirebase = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId) && !new URLSearchParams(location.search).has('local');
 
 export const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY as string | undefined;
-export const TEXT_MODEL = (import.meta.env.VITE_GEMINI_TEXT_MODEL as string) || 'gemini-2.5-flash-lite';
 
 /** URL absoluta de una página del proyecto (sirve igual en local y desplegado). */
 export function pageUrl(path: string): string {

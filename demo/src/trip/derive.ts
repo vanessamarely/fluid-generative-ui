@@ -1,7 +1,7 @@
 // Estado DERIVADO: se calcula en el cliente a partir de lo que generaron los agentes.
 // La IA decide qué hacer; el código hace las cuentas (y nunca se equivoca sumando).
 import { monthName, type ItineraryDoc, type LodgingDoc, type TripRequest } from './agents';
-import { FOOD_PER_DAY, KIND_EMOJI, LODGING_BY_ID, PLACE_BY_ID, REGIONS, type Lodging, type Place, type RegionId } from './places';
+import { FOOD_PER_DAY, LODGING_BY_ID, PLACE_BY_ID, REGIONS, type Lodging, type Place, type RegionId } from './places';
 
 export interface Budget {
   lodging: number;
@@ -65,7 +65,7 @@ export function fallbackTips(sel: Selection, req: TripRequest, itinerary: Itiner
     const p = PLACE_BY_ID.get(sel.id);
     if (!p) return '';
     const lines = [
-      `${KIND_EMOJI[p.kind]} ${p.name}: ${p.blurb.toLowerCase()}.`,
+      `${p.name}: ${p.blurb.toLowerCase()}.`,
       `• Reserva unas ${p.hours} h y lleva ${BRING[p.kind]}.`,
       p.cost ? `• Cuesta ≈ $${p.cost} por persona ($${p.cost * req.people} para el grupo).` : '• Es gratis: ideal para equilibrar el presupuesto.',
       p.caution ? `• Ojo: ${p.caution.toLowerCase()}.` : '• Ve temprano: menos calor y menos gente.',
@@ -77,8 +77,8 @@ export function fallbackTips(sel: Selection, req: TripRequest, itinerary: Itiner
     const l = LODGING_BY_ID.get(sel.id);
     if (!l) return '';
     return [
-      `🏨 ${l.name} · ${l.style} · ${l.rating}★ (${l.reviews} reseñas).`,
-      l.verified ? '• Verificado: licencia de turismo y reseñas reales.' : '• ⚠ Sin verificar: confirma licencia y ubicación antes de pagar.',
+      `${l.name} · ${l.style} · ${l.rating}★ (${l.reviews} reseñas).`,
+      l.verified ? '• Verificado: licencia de turismo y reseñas reales.' : '• Sin verificar: confirma licencia y ubicación antes de pagar.',
       `• Para ${req.people} ${req.people === 1 ? 'persona' : 'personas'} necesitas ${Math.ceil(req.people / 2)} habitación(es).`,
       `• Extras: ${l.perks.join(', ').toLowerCase()}.`,
     ].join('\n');
@@ -89,14 +89,14 @@ export function fallbackTips(sel: Selection, req: TripRequest, itinerary: Itiner
     const places = (d.placeIds ?? []).map((id) => PLACE_BY_ID.get(id)).filter(Boolean) as Place[];
     const hours = places.reduce((s, p) => s + p.hours, 0);
     return [
-      `📅 Día ${sel.index + 1} · ${d.title}: ${places.map((p) => p.name).join(' y ')}.`,
+      `Día ${sel.index + 1} · ${d.title}: ${places.map((p) => p.name).join(' y ')}.`,
       `• ≈${hours} h de actividades: ${hours > 7 ? 'día intenso, desayuna fuerte' : 'deja espacio para improvisar'}.`,
       `• Lleva ${BRING[places[0]?.kind ?? 'naturaleza']}.`,
       `• En ${monthName(req.month)} ${[8, 9, 10].includes(req.month) ? 'es temporada de lluvias: ten un plan B bajo techo' : 'el clima suele ser estable'}.`,
     ].join('\n');
   }
   return [
-    `✨ Tu viaje en ${monthName(req.month)} para ${req.people}.`,
+    `Tu viaje en ${monthName(req.month)} para ${req.people}.`,
     '• Toca un día, un lugar o un hospedaje y te doy sugerencias de ese contexto.',
     '• Cambia personas o estilo y el presupuesto se recalcula al instante.',
   ].join('\n');

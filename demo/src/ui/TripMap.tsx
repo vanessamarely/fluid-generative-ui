@@ -6,7 +6,8 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
 import type { DocStore } from '../genui/doc-store';
 import type { Intent, ItineraryDay } from '../trip/agents';
-import { KIND_EMOJI, PLACE_BY_ID, REGIONS, type RegionId } from '../trip/places';
+import { PLACE_BY_ID, REGIONS, type RegionId } from '../trip/places';
+import { kindIconSvg } from './icons';
 
 const DR_CENTER: [number, number] = [18.85, -70.2];
 
@@ -27,10 +28,10 @@ export function createMap(el: HTMLElement, animate = true): L.Map {
   return map;
 }
 
-export function markerIcon(day: number, emoji: string) {
+export function markerIcon(day: number, iconSvg: string) {
   return L.divIcon({
     className: 'map-pin',
-    html: `<span class="pin-day">${day + 1}</span><span class="pin-emoji">${emoji}</span>`,
+    html: `<span class="pin-day">${day + 1}</span><span class="pin-emoji">${iconSvg}</span>`,
     iconSize: [44, 28],
     iconAnchor: [22, 28],
   });
@@ -83,12 +84,12 @@ export function TripMap({ store, intent, onPick }: { store: DocStore; intent: In
         const existing = markers.current.get(id);
         if (existing) {
           if (existing.day !== day) {
-            existing.m.setIcon(markerIcon(day, KIND_EMOJI[p.kind]));
+            existing.m.setIcon(markerIcon(day, kindIconSvg(p.kind, 14)));
             existing.day = day;
           }
           continue;
         }
-        const m = L.marker([p.lat, p.lng], { icon: markerIcon(day, KIND_EMOJI[p.kind]), title: p.name, keyboard: true })
+        const m = L.marker([p.lat, p.lng], { icon: markerIcon(day, kindIconSvg(p.kind, 14)), title: p.name, keyboard: true })
           .addTo(map.current)
           .on('click', () => pick.current(id, markers.current.get(id)?.day ?? day));
         markers.current.set(id, { m, day });

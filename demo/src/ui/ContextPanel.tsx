@@ -106,10 +106,10 @@ export function ContextPanel({
     const lines = shareText.split('\n');
     const r =
       kind === 'summary'
-        ? summarizeStream(shareText, `🌴 ${lines[0]}: ${lines.slice(2, -2).map((l) => l.split(':')[1]?.trim()).join(' · ')}. ¿Te apuntas?`, ctrl.signal)
+        ? summarizeStream(shareText, `${lines[0]}: ${lines.slice(2, -2).map((l) => l.split(':')[1]?.trim()).join(' · ')}. ¿Te apuntas?`, ctrl.signal)
         : kind === 'en'
           ? translateStream(shareText, `(EN) ${shareText.replace(/Día/g, 'Day').replace(/Hospedaje/g, 'Stay').replace(/Presupuesto estimado/g, 'Estimated budget')}`, ctrl.signal)
-          : rewriteStream(shareText, 'more-casual', `¡Nos vamos! ${lines[0]} 🙌 ${lines[lines.length - 1]}`, ctrl.signal);
+          : rewriteStream(shareText, 'more-casual', `¡Nos vamos! ${lines[0]}. ${lines[lines.length - 1]}`, ctrl.signal);
     r.then(async (res) => {
       let acc = '';
       setShare((s) => ({ ...s, native: res.native }));

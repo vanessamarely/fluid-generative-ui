@@ -7,9 +7,11 @@
 import { memo } from 'react';
 import type { DocStore } from '../genui/doc-store';
 import type { Intent, ItineraryDay, LodgingOption, TripRequest } from '../trip/agents';
-import { KIND_EMOJI, LODGING_BY_ID, PLACE_BY_ID, REGIONS, type RegionId } from '../trip/places';
+import { LODGING_BY_ID, PLACE_BY_ID, REGIONS, type RegionId } from '../trip/places';
 import type { Check } from '../trip/verify';
 import type { Selection } from '../trip/derive';
+import { OctagonX, TriangleAlert } from 'lucide-react';
+import { KindIcon } from './KindIcon';
 import { useField, useItem, useListLength, usePrevious, useStatus } from './useDoc';
 
 const isBusy = (s: string) => s === 'thinking' || s === 'streaming' || s === 'waiting';
@@ -118,7 +120,7 @@ const DaySlot = memo(function DaySlot({
             <h3>{day.title}</h3>
             {heavy && (
               <span className="check-pill warn" title={heavy.detail}>
-                ⚠ cargado
+                <TriangleAlert size={12} aria-hidden="true" /> cargado
               </span>
             )}
           </button>
@@ -154,8 +156,8 @@ const PlaceRow = memo(function PlaceRow({
   return (
     <li className="place" data-place={id} data-blocked={blocked ? true : undefined} style={{ viewTransitionName: `place-${id}` }}>
       <button type="button" aria-pressed={selected} onClick={() => onSelect({ kind: 'place', id, day })}>
-        <span className="place-emoji" aria-hidden="true">
-          {KIND_EMOJI[p.kind]}
+        <span className="place-emoji">
+          <KindIcon kind={p.kind} />
         </span>
         <span className="place-body">
           <span className="place-name">{p.name}</span>
@@ -245,7 +247,7 @@ const LodgingSlot = memo(function LodgingSlot({
         <button className="lodging-head" type="button" onClick={() => onSelect({ kind: 'lodging', id: l.id })}>
           <h3>{l.name}</h3>
           <span className="lodging-meta">
-            {l.style} · {l.rating}★ ({l.reviews}) · {l.verified ? '✓ verificado' : 'sin verificar'}
+            {l.style} · {l.rating}★ ({l.reviews}) · {l.verified ? 'verificado' : 'sin verificar'}
           </span>
         </button>
         <p className="lodging-reason">{opt?.reason ?? ' '}</p>
@@ -260,7 +262,7 @@ const LodgingSlot = memo(function LodgingSlot({
         </div>
         {blocked && (
           <p className="stamp" role="alert">
-            ⚠ Descartado por el verificador: {blocked.detail}
+            <OctagonX size={14} aria-hidden="true" /> Descartado por el verificador: {blocked.detail}
           </p>
         )}
         {priceWarn && !blocked && <p className="stamp warn">{priceWarn.detail}</p>}

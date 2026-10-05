@@ -104,7 +104,7 @@ export const PLACES: Place[] = [
 export const LODGINGS: Lodging[] = [
   { id: 'sd-hostal', name: 'Hostal Las Damas', region: 'santo-domingo', pricePerNight: 45, style: 'económico', rating: 4.4, reviews: 812, verified: true, safety: 4.5, perks: ['Zona Colonial', 'Desayuno'] },
   { id: 'sd-boutique', name: 'Casa Ozama Boutique', region: 'santo-domingo', pricePerNight: 120, style: 'boutique', rating: 4.8, reviews: 1290, verified: true, safety: 4.8, perks: ['Terraza', 'Piscina'] },
-  // ⚠ Trampa para el verificador: barato, mal calificado y sin verificar.
+  // Trampa para el verificador: barato, mal calificado y sin verificar.
   { id: 'sd-ganga', name: 'Habitaciones La Ganga', region: 'santo-domingo', pricePerNight: 12, style: 'económico', rating: 2.1, reviews: 9, verified: false, safety: 1.8, perks: ['Precio más bajo'], note: 'Sin licencia de turismo; reportes de robos en la calle' },
   { id: 'sm-eco', name: 'Casa Ballena Eco-lodge', region: 'samana', pricePerNight: 85, style: 'eco-lodge', rating: 4.7, reviews: 534, verified: true, safety: 4.7, perks: ['Vista a la bahía', 'Solar'] },
   { id: 'sm-hostal', name: 'Posada Las Terrenas', region: 'samana', pricePerNight: 50, style: 'económico', rating: 4.3, reviews: 640, verified: true, safety: 4.4, perks: ['A 2 min de la playa'] },
@@ -124,14 +124,6 @@ export const LODGINGS: Lodging[] = [
 export const PLACE_BY_ID = new Map(PLACES.map((p) => [p.id, p]));
 export const LODGING_BY_ID = new Map(LODGINGS.map((l) => [l.id, l]));
 export const REGION_IDS = Object.keys(REGIONS) as RegionId[];
-
-export const KIND_EMOJI: Record<PlaceKind, string> = {
-  playa: '🏖️',
-  naturaleza: '🌿',
-  cultura: '🏛️',
-  aventura: '🧗',
-  gastronomía: '🍽️',
-};
 
 /** Comida por persona por día (USD): lo calcula el código, no el modelo. */
 export const FOOD_PER_DAY = 35;
