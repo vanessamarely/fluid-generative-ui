@@ -146,7 +146,7 @@ export interface Realtime {
   onReaction(cb: (emoji: Reaction) => void): Unsub;
   onCards(cb: (cards: CardData[]) => void): Unsub;
   /** Solo presentadora (las reglas no dejan leerlas a nadie más). */
-  onQuestions(cb: (qs: AudienceQuestion[]) => void): Unsub;
+  onQuestions(cb: (qs: AudienceQuestion[]) => void, onError?: (msg: string) => void): Unsub;
   removeQuestion(id: string): Promise<void>;
   updateQuestion(id: string, patch: Partial<AudienceQuestion>): Promise<void>;
   setCardHidden(id: string, hidden: boolean): Promise<void>;

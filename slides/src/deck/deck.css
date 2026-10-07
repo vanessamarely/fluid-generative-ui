@@ -499,3 +499,8 @@ section[data-deck-active] .wiggle { animation: wiggle 1.2s ease-in-out infinite;
 .qa-answer[data-status='error'], .qa-answer[data-status='blocked'] { background: #f8d8d8; }
 .qa-answer small { display: block; margin-top: 6px; font: 400 11.5px 'Roboto Mono', monospace; color: #4b4b4b; }
 .qa-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.qa-presenter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; font: 400 14px var(--mono); color: var(--ink-dim); pointer-events: auto; }
+.qa-presenter[hidden] { display: none; }
+.qa-empty.error { color: #b3261e; }
+.qa-frame .qa-presenter { padding-right: 230px; }

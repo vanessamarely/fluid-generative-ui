@@ -5,12 +5,10 @@ import {
   getAuth,
   inMemoryPersistence,
   linkWithPopup,
-  onAuthStateChanged,
   setPersistence,
   signInAnonymously,
   signInWithCredential,
   signInWithPopup,
-  type User,
 } from 'firebase/auth';
 import {
   Timestamp,
@@ -42,17 +40,11 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
   const db = getFirestore(app);
 
   // Todo el público entra anónimo: sin formularios, sin datos personales.
-  await new Promise<User>((resolve, reject) => {
-    const off = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        off();
-        resolve(u);
-      }
-    });
-    signInAnonymously(auth).catch((err) => {
-      if (!auth.currentUser) reject(err);
-    });
-  });
+  // OJO: primero esperamos a que Firebase restaure la sesión guardada. Si ya hay usuario
+  // (p. ej. la presentadora con GitHub), NO entramos anónimo: eso reemplazaría su sesión
+  // y las reglas dejarían de reconocerla (no podría leer las preguntas ni publicar).
+  await auth.authStateReady();
+  if (!auth.currentUser) await signInAnonymously(auth);
 
   const session = doc(db, 'sessions', SESSION_ID);
   const sub = (name: string) => collection(session, name);
@@ -152,19 +144,35 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
         ),
       );
     },
-    onQuestions(cb) {
-      const q = query(sub('questions'), orderBy('at', 'asc'), limit(100));
-      return onSnapshot(
-        q,
-        (snap) =>
-          cb(
-            snap.docs.map((d) => {
-              const data = d.data({ serverTimestamps: 'estimate' });
-              return { ...(data as AudienceQuestion), id: d.id, at: ms(data.at) ?? Date.now() };
-            }),
-          ),
-        () => cb([]), // sin permiso (público): no hay nada que mostrar
-      );
+    onQuestions(cb, onError) {
+      // Si el listener falla (permiso, red), Firestore lo cierra: lo reabrimos solos.
+      let off: (() => void) | null = null;
+      let timer = 0;
+      let stopped = false;
+      const listen = () => {
+        const q = query(sub('questions'), orderBy('at', 'asc'), limit(100));
+        off = onSnapshot(
+          q,
+          (snap) =>
+            cb(
+              snap.docs.map((d) => {
+                const data = d.data({ serverTimestamps: 'estimate' });
+                return { ...(data as AudienceQuestion), id: d.id, at: ms(data.at) ?? Date.now() };
+              }),
+            ),
+          (err) => {
+            console.warn('[live] preguntas:', err.code, err.message);
+            onError?.(err.code === 'permission-denied' ? 'Sin permiso para leer preguntas: inicia sesión con GitHub (Presentar en vivo).' : `No pude leer las preguntas (${err.code}). Reintentando…`);
+            if (!stopped) timer = window.setTimeout(listen, 4000);
+          },
+        );
+      };
+      listen();
+      return () => {
+        stopped = true;
+        clearTimeout(timer);
+        off?.();
+      };
     },
     async updateQuestion(id, patch) {
       await updateDoc(doc(sub('questions'), id), patch);

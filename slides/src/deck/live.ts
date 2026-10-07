@@ -71,8 +71,10 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   let answers: AnswerKey = {};
   let questions: AudienceQuestion[] = [];
   let unsubQuestions: (() => void) | null = null;
+  let qaError = '';
   const onQuestions = (qs: AudienceQuestion[]) => {
     questions = qs;
+    qaError = '';
     syncPresenterUi();
     renderQuestions();
     queueAnswers();
@@ -164,7 +166,10 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
       : 'Los celulares NO siguen el deck todavía · Toca aquí para Presentar en vivo (GitHub)';
     badge.textContent = (rt.mode === 'local' ? '● EN VIVO · ensayo local' : '● EN VIVO') + (questions.length ? ` · ${questions.length} ${questions.length === 1 ? 'pregunta' : 'preguntas'}` : '');
     document.querySelectorAll<HTMLElement>('[data-q-count]').forEach((el) => (el.textContent = String(questions.length)));
-    if (presenter && !unsubQuestions) unsubQuestions = rt.onQuestions(onQuestions);
+    if (presenter && !unsubQuestions) unsubQuestions = rt.onQuestions(onQuestions, (msg) => {
+      qaError = msg;
+      renderQuestions();
+    });
     // Revelar y moderar SOLO existen para la presentadora: el público no ve el botón.
     document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((b) => (b.hidden = !presenter));
     document.querySelectorAll<HTMLElement>('[data-presenter-ui]').forEach((el) => (el.hidden = !presenter));
@@ -226,10 +231,29 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     if (e.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
     if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'q') toggleQa();
   });
+  document.addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest<HTMLElement>('[data-open-qa], [data-go-qa]');
+    if (!t) return;
+    if (t.hasAttribute('data-open-qa')) toggleQa(true);
+    else (stage as HTMLElement & { goTo(i: number): void }).goTo(sections.findIndex((s) => s.dataset.live === 'qa'));
+  });
+  function renderQaSummary() {
+    const answered = questions.filter((q) => q.status === 'answered').length;
+    const shown = questions.filter((q) => q.status === 'answered' && q.show).length;
+    const pending = questions.filter((q) => !q.status || inFlight.has(q.id)).length;
+    const failed = questions.filter((q) => q.status === 'error').length;
+    document.querySelectorAll<HTMLElement>('[data-qa-summary]').forEach((el) => {
+      el.textContent = `${questions.length} recibidas · ${answered} respondidas por IA · ${shown} en pantalla${pending ? ` · ${pending} en cola` : ''}${failed ? ` · ${failed} sin IA` : ''}`;
+    });
+  }
   function renderQuestions() {
+    renderQaSummary();
     if (qaPanel.hidden) return;
     const list = qaPanel.querySelector('.qa-list')!;
-    (qaPanel.querySelector('.qa-empty') as HTMLElement).hidden = questions.length > 0;
+    const empty = qaPanel.querySelector('.qa-empty') as HTMLElement;
+    empty.hidden = questions.length > 0 && !qaError;
+    empty.textContent = qaError || 'Aún no hay preguntas. Llegan desde el botón «Pregunta» del celular y Gemini Nano las responde aquí.';
+    empty.classList.toggle('error', Boolean(qaError));
     // Por clave: solo se agregan o quitan las que cambian.
     const ids = new Set(questions.map((q) => q.id));
     list.querySelectorAll<HTMLElement>('[data-id]').forEach((li) => !ids.has(li.dataset.id!) && li.remove());
