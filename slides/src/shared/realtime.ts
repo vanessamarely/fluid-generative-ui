@@ -153,6 +153,9 @@ export interface Realtime {
   onQuestions(cb: (qs: AudienceQuestion[]) => void, onError?: (msg: string) => void): Unsub;
   removeQuestion(id: string): Promise<void>;
   updateQuestion(id: string, patch: Partial<AudienceQuestion>): Promise<void>;
+  /** Solo presentadora: borra jugadores, votos, likes, cards, preguntas, apodos y reacciones
+   *  de ESTA sesión y deja el slide en blanco. Las respuestas privadas (answers) se conservan. */
+  resetSession(): Promise<number>;
   setCardHidden(id: string, hidden: boolean): Promise<void>;
 
   /** Solo presentadora: login con GitHub para poder escribir la sesión. */

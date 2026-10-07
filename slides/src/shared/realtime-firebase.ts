@@ -17,6 +17,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   getFirestore,
   limit,
   onSnapshot,
@@ -25,6 +26,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { firebaseConfig, PRESENTER_GITHUB_ID, SESSION_ID } from './config';
 import { getFirebaseApp } from './firebase';
@@ -190,6 +192,21 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
         clearTimeout(timer);
         off?.();
       };
+    },
+    async resetSession() {
+      let n = 0;
+      for (const name of ['players', 'names', 'votes', 'likes', 'cards', 'questions', 'reactions']) {
+        const snap = await getDocs(sub(name));
+        for (let i = 0; i < snap.docs.length; i += 400) {
+          const batch = writeBatch(db);
+          snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+          await batch.commit();
+        }
+        n += snap.size;
+      }
+      // Sin merge: se van openedAt, revealed, results, podium, qa…
+      await setDoc(session, { ...emptySlide(), updatedAt: serverTimestamp() });
+      return n;
     },
     async updateQuestion(id, patch) {
       await updateDoc(doc(sub('questions'), id), patch);

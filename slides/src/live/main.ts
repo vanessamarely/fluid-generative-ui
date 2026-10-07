@@ -127,7 +127,15 @@ async function boot() {
     renderScore();
     if (view === 'live' && slide?.kind === 'poll') render(false);
   });
-  if (name) void rt.join(name);
+  if (name) {
+    // Si la sesión se vació (o el apodo ya es de otra persona), vuelve a elegir apodo.
+    const ok = await rt.reserveName(name).catch(() => true);
+    if (ok) void rt.join(name);
+    else {
+      name = null;
+      store.set('name', null);
+    }
+  }
   render(true);
 }
 

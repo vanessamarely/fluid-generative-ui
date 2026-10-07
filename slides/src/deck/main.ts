@@ -135,6 +135,7 @@ menu.innerHTML = `
   <button type="button" data-act="answers" data-presenter-ui hidden>Cargar respuestas (answers.json) <kbd data-answers-status></kbd></button>
   <button type="button" data-act="questions" data-presenter-ui hidden>Preguntas del público <kbd><span data-q-count>0</span> · Q</kbd></button>
   <button type="button" data-act="gemini-key" data-presenter-ui hidden>Key de Gemini para Q&amp;A (opcional)</button>
+  <button type="button" data-act="wipe" data-presenter-ui hidden>Vaciar sesión en vivo…</button>
   <button type="button" data-act="reset" data-local-only>Reiniciar sesión de ensayo</button>
   <div class="group">Ir a</div>
   <div class="slides-list"></div>`;
@@ -178,6 +179,10 @@ menu.addEventListener('click', (e) => {
   if (act === 'rail') toggleRail();
   if (act === 'present') document.dispatchEvent(new CustomEvent('deck:present'));
   if (act === 'reset') document.dispatchEvent(new CustomEvent('deck:reset'));
+  if (act === 'wipe') {
+    closeMenu();
+    document.dispatchEvent(new CustomEvent('deck:wipe'));
+  }
   if (act === 'answers') document.dispatchEvent(new CustomEvent('deck:answers'));
   if (act === 'gemini-key') document.dispatchEvent(new CustomEvent('deck:gemini-key'));
   if (act === 'questions') {

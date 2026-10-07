@@ -7,7 +7,9 @@
 - Pestaña 2: `https://fluid-generative-ui-demo.web.app/compare.html`. Pestaña 3: la demo con el laboratorio abierto (`?lab`).
 - DevTools abierto en la pestaña de la demo (Performance y AI assistance).
 - Plan B sin red: la demo con `?engine=mock` y los clips de los slides 9 y 32 (se reproducen solos).
-- Ensayo: `?session=ensayo1` en el deck. El día de la charla, sin parámetro.
+- Ensayo: `?session=ensayo1` en el deck (y el QR lo incluye). El día de la charla, sin parámetro.
+- **Antes de empezar**: menú → *Vaciar sesión en vivo…* (escribe VACIAR). Borra jugadores, votos, likes, cards, preguntas, apodos y reacciones de pruebas; conserva las respuestas cargadas.
+- **Al terminar**: tecla **Q** → *Descargar .md* para quedarte con las preguntas y respuestas.
 - El celular del público muestra un **espejo del slide** (título, puntos clave y código) y 4 reacciones: Fuego, Like (cuenta como like), Risa y **Pregunta**. Las preguntas llegan a tu panel (tecla **Q** o menú → *Preguntas del público*) y Gemini Nano las va respondiendo en tu Chrome; las apropiadas aparecen en el slide *Sus preguntas*. Si el equipo no tiene Nano: menú → *Key de Gemini para Q&A* (se guarda solo en ese navegador).
 - Si ves el aviso amarillo **"Los celulares NO siguen el deck"**, tócalo para iniciar sesión con GitHub: sin eso, el deck no transmite.
 

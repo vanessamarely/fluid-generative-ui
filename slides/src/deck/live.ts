@@ -7,7 +7,7 @@
 import QRCode from 'qrcode';
 import { createElement, Brain, Check, Circle, Diamond, Flame, Hand, Heart, Laugh, Lightbulb, MessageCircleQuestion, Rocket, Square, Triangle, X, type IconNode } from 'lucide';
 import { cardHTML, winnerCode } from '../shared/card';
-import { REPO_URL, SESSION_PARAM } from '../shared/config';
+import { REPO_URL, SESSION_ID, SESSION_PARAM } from '../shared/config';
 import { getStarCount } from '../shared/github';
 import { createAnswerer, geminiKey, qaEngine, setGeminiKey } from './qa-ai';
 import { QUESTIONS, REACTION_META, parseAnswerKey, type AnswerKey, type QuestionId, type Reaction } from '../shared/questions';
@@ -194,6 +194,25 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     localStorage.removeItem('fgui.local.db');
     location.reload();
   });
+  // Antes de la charla (o después de ensayar en la sesión real): dejarla en cero.
+  document.addEventListener('deck:wipe', async () => {
+    if (!presenter) return;
+    const typed = prompt(
+      `Vas a BORRAR jugadores, votos, likes, cards, preguntas, apodos y reacciones de la sesión "${SESSION_ID}".\n` +
+        `Las respuestas correctas cargadas se conservan. Si quieres guardar las preguntas, descárgalas antes desde el panel Q.\n\n` +
+        `Escribe VACIAR para confirmar:`,
+    );
+    if (typed?.trim().toUpperCase() !== 'VACIAR') return;
+    try {
+      const n = await rt.resetSession();
+      lastQa = '';
+      publishSlide();
+      alert(`Sesión "${SESSION_ID}" vacía (${n} documentos borrados). Lista para empezar.`);
+    } catch (err) {
+      console.error(err);
+      alert('No se pudo vaciar la sesión. ¿Iniciaste sesión con GitHub (Presentar en vivo)?');
+    }
+  });
   document.addEventListener('deck:present', async () => {
     try {
       await rt.signInPresenter();
@@ -217,7 +236,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   qaPanel.className = 'qa-panel';
   qaPanel.hidden = true;
   qaPanel.setAttribute('aria-label', 'Preguntas del público');
-  qaPanel.innerHTML = `<header><h2>Preguntas del público <small>respuestas con IA</small></h2><button type="button" class="qa-close" aria-label="Cerrar"></button></header><ol class="qa-list"></ol><p class="qa-empty">Aún no hay preguntas. Llegan desde el botón <b>Pregunta</b> del celular y Gemini Nano las responde aquí.</p>`;
+  qaPanel.innerHTML = `<header><h2>Preguntas del público <small>respuestas con IA</small></h2><button type="button" class="qa-download">Descargar .md</button><button type="button" class="qa-close" aria-label="Cerrar"></button></header><ol class="qa-list"></ol><p class="qa-empty">Aún no hay preguntas. Llegan desde el botón <b>Pregunta</b> del celular y Gemini Nano las responde aquí.</p>`;
   qaPanel.querySelector('.qa-close')!.append(icon(X, 20));
   document.body.append(qaPanel);
   const toggleQa = (open = qaPanel.hidden) => {
@@ -226,6 +245,20 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     if (open) renderQuestions();
   };
   qaPanel.querySelector('.qa-close')!.addEventListener('click', () => toggleQa(false));
+  // Para quedarte con las preguntas después de la charla (o antes de vaciar la sesión).
+  qaPanel.querySelector('.qa-download')!.addEventListener('click', () => {
+    const md = [`# Preguntas del público · ${SESSION_ID}`, '', `Exportadas: ${new Date().toLocaleString('es-DO')}`, ''];
+    questions.forEach((q, i) => {
+      md.push(`## ${i + 1}. ${q.text}`, '', `*${q.name || 'Anónimo'} · slide: ${q.slide}*`, '');
+      if (q.status === 'answered') md.push(q.answer ?? '', '', `> ${q.engine === 'cloud' ? 'Gemini API' : 'Gemini Nano'} · confianza ${q.confidence} · slide citado: ${q.ref}${q.show ? '' : ' · (oculta en pantalla)'}`, '');
+      else md.push(`_(sin respuesta: ${q.status ?? 'en cola'})_`, '');
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([md.join('\n')], { type: 'text/markdown' }));
+    a.download = `preguntas-${SESSION_ID}.md`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
   document.addEventListener('deck:questions', () => toggleQa());
   addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;

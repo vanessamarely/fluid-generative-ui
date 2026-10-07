@@ -504,3 +504,5 @@ section[data-deck-active] .wiggle { animation: wiggle 1.2s ease-in-out infinite;
 .qa-presenter[hidden] { display: none; }
 .qa-empty.error { color: #b3261e; }
 .qa-frame .qa-presenter { padding-right: 230px; }
+.qa-panel header { gap: 8px; } .qa-panel header h2 { margin-right: auto; }
+.qa-download { padding: 6px 12px; border-radius: 999px; border: 2px solid #1e1e1e; background: #fff; font: 500 13px 'Google Sans', system-ui, sans-serif; cursor: pointer; }

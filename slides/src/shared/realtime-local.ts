@@ -126,6 +126,12 @@ export function createLocalRealtime(): Realtime {
     },
     onCards: (cb) => sub((db) => cb(Object.values(db.cards).sort((a, b) => b.createdAt - a.createdAt))),
     onQuestions: (cb) => sub((db) => cb(Object.values(db.questions).sort((a, b) => a.at - b.at))),
+    async resetSession() {
+      const db = read();
+      const n = Object.keys(db.players).length + Object.keys(db.votes).length + Object.keys(db.questions).length;
+      write((d) => Object.assign(d, empty()));
+      return n;
+    },
     async updateQuestion(id, patch) {
       write((db) => {
         if (db.questions[id]) db.questions[id] = { ...db.questions[id], ...patch };

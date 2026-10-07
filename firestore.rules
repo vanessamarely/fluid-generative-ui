@@ -43,12 +43,14 @@ service cloud.firestore {
       match /likes/{uid} {
         allow read: if true;
         allow create, update: if isOwner(uid) && onlyKeys(['at']);
-        allow delete: if isOwner(uid);
+        allow delete: if isOwner(uid) || isPresenter();
       }
 
-      // Apodos únicos: el primero que lo crea se lo queda (no hay update ni delete).
+      // Apodos únicos: el primero que lo crea se lo queda (sin update; solo la presentadora
+      // borra, al vaciar la sesión antes de empezar).
       match /names/{key} {
         allow read: if true;
+        allow delete: if isPresenter();
         allow create: if request.auth != null && onlyKeys(['uid', 'at'])
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.at == request.time
@@ -60,6 +62,7 @@ service cloud.firestore {
         allow create, update: if isOwner(uid) && onlyKeys(['name', 'at'])
           && request.resource.data.name is string
           && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 32;
+        allow delete: if isPresenter();
       }
 
       match /votes/{uid} {
@@ -69,6 +72,7 @@ service cloud.firestore {
           && validAnswer('q1', ['a', 'b', 'c', 'd'])
           && validAnswer('q2', ['a', 'b', 'c', 'd'])
           && validAnswer('q3', ['a', 'b', 'c', 'd']);
+        allow delete: if isPresenter();
       }
 
       // Opción válida y, si la respuesta cambió, su timestamp debe ser la hora del servidor.
@@ -89,6 +93,7 @@ service cloud.firestore {
         allow update: if isOwner(uid) && onlyKeys(['emoji', 'at', 'n'])
           && request.resource.data.emoji in ['fire', 'heart', 'laugh', 'ask', 'clap', 'mind', 'idea', 'rocket']
           && request.time > resource.data.at + duration.value(800, 'ms');
+        allow delete: if isPresenter();
       }
 
       match /questions/{id} {
