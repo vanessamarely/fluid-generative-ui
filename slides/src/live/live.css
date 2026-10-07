@@ -194,3 +194,9 @@ main { max-width: 520px; margin: 0 auto; min-height: 60dvh; }
 
 .score { white-space: nowrap; }
 @media (max-width: 400px) { .score-label { display: none; } .brand span { font-size: 14px; } }
+
+.qa-items { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.qa-items li { padding: 12px 14px; border-radius: 14px; background: var(--p-blue); overflow-wrap: anywhere; }
+.qa-items li:nth-child(4n + 2) { background: var(--p-green); } .qa-items li:nth-child(4n + 3) { background: var(--p-yellow); } .qa-items li:nth-child(4n + 4) { background: var(--p-red); }
+.qa-items p { margin: 4px 0 6px; line-height: 1.45; }
+.qa-items small { font: 400 12px var(--mono); color: var(--ink-dim); }

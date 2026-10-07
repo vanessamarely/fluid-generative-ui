@@ -82,7 +82,10 @@ service cloud.firestore {
       }
 
       match /questions/{id} {
+        // La presentadora lee, borra y completa la respuesta generada por IA (en su navegador).
         allow read, delete: if isPresenter();
+        allow update: if isPresenter()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'answer', 'ref', 'confidence', 'engine', 'show']);
         allow create: if request.auth != null
           && onlyKeys(['uid', 'name', 'text', 'slide', 'at'])
           && request.resource.data.uid == request.auth.uid

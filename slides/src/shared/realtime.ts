@@ -10,7 +10,7 @@
 import { hasFirebase } from './config';
 import type { AnswerKey, QuestionId, Reaction } from './questions';
 
-export type LiveKind = 'content' | 'join' | 'poll' | 'cards' | 'podium' | 'demo' | 'end';
+export type LiveKind = 'content' | 'join' | 'poll' | 'cards' | 'podium' | 'qa' | 'demo' | 'end';
 
 export interface PollResult {
   counts: Record<string, number>;
@@ -32,6 +32,23 @@ export interface AudienceQuestion {
   text: string;
   slide: string;
   at: number;
+  /** Lo completa la IA en el deck de la presentadora */
+  status?: 'answered' | 'error' | 'blocked';
+  answer?: string;
+  ref?: string;
+  confidence?: 'alta' | 'media' | 'baja';
+  engine?: 'nano' | 'cloud';
+  /** ¿Se muestra en el slide de Q&A? (la presentadora puede ocultarla) */
+  show?: boolean;
+}
+
+/** Pregunta + respuesta aprobada que se proyecta y llega a los celulares. */
+export interface QaItem {
+  q: string;
+  a: string;
+  name: string;
+  ref: string;
+  engine: string;
 }
 
 export interface SlideState {
@@ -43,6 +60,8 @@ export interface SlideState {
   qid?: QuestionId | null;
   tip?: string | null;
   digest?: SlideDigest | null;
+  /** Preguntas del público ya respondidas y aprobadas */
+  qa?: QaItem[];
   /** segundos que dura cada pregunta */
   duration: number;
   /** epoch ms (hora del servidor) en que se abrió cada pregunta */
@@ -129,6 +148,7 @@ export interface Realtime {
   /** Solo presentadora (las reglas no dejan leerlas a nadie más). */
   onQuestions(cb: (qs: AudienceQuestion[]) => void): Unsub;
   removeQuestion(id: string): Promise<void>;
+  updateQuestion(id: string, patch: Partial<AudienceQuestion>): Promise<void>;
   setCardHidden(id: string, hidden: boolean): Promise<void>;
 
   /** Solo presentadora: login con GitHub para poder escribir la sesión. */

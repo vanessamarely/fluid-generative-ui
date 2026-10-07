@@ -114,6 +114,11 @@ export function createLocalRealtime(): Realtime {
     },
     onCards: (cb) => sub((db) => cb(Object.values(db.cards).sort((a, b) => b.createdAt - a.createdAt))),
     onQuestions: (cb) => sub((db) => cb(Object.values(db.questions).sort((a, b) => a.at - b.at))),
+    async updateQuestion(id, patch) {
+      write((db) => {
+        if (db.questions[id]) db.questions[id] = { ...db.questions[id], ...patch };
+      });
+    },
     async removeQuestion(id) {
       write((db) => delete db.questions[id]);
     },

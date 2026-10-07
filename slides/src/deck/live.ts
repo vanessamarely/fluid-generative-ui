@@ -9,8 +9,9 @@ import { createElement, Brain, Check, Circle, Diamond, Flame, Hand, Heart, Laugh
 import { cardHTML, winnerCode } from '../shared/card';
 import { REPO_URL, SESSION_PARAM } from '../shared/config';
 import { getStarCount } from '../shared/github';
+import { createAnswerer, geminiKey, qaEngine, setGeminiKey } from './qa-ai';
 import { QUESTIONS, REACTION_META, parseAnswerKey, type AnswerKey, type QuestionId, type Reaction } from '../shared/questions';
-import { getRealtime, scoreFor, tally, type AudienceQuestion, type CardData, type SlideDigest, type LiveKind, type Player, type SlideState, type VoteRecord } from '../shared/realtime';
+import { getRealtime, scoreFor, tally, type AudienceQuestion, type CardData, type QaItem, type SlideDigest, type LiveKind, type Player, type SlideState, type VoteRecord } from '../shared/realtime';
 
 const SHAPES: IconNode[] = [Triangle, Diamond, Circle, Square];
 const REACTION_ICONS: Record<Reaction, IconNode> = { fire: Flame, heart: Heart, laugh: Laugh, ask: MessageCircleQuestion, clap: Hand, mind: Brain, idea: Lightbulb, rocket: Rocket };
@@ -74,10 +75,93 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     questions = qs;
     syncPresenterUi();
     renderQuestions();
+    queueAnswers();
+    publishQa();
   };
+
+  // ── La IA responde (solo en el navegador de la presentadora) ──────────
+  // Grounding: el contexto son las ideas clave de los slides; la respuesta debe citar uno.
+  const answerer = createAnswerer(sections.filter((s) => s.dataset.tip).map((s) => ({ label: s.dataset.label ?? '', text: s.dataset.tip! })));
+  const inFlight = new Set<string>();
+  let chain = Promise.resolve();
+  function answerOne(q: AudienceQuestion) {
+    if (inFlight.has(q.id)) return;
+    inFlight.add(q.id);
+    renderQuestions();
+    // En serie: Nano atiende una pregunta a la vez y el deck sigue fluido.
+    chain = chain.then(async () => {
+      try {
+        const a = await answerer(q.text);
+        await rt.updateQuestion(
+          q.id,
+          a.appropriate
+            ? { status: 'answered', answer: a.answer, ref: a.slide, confidence: a.confidence, engine: a.engine, show: true }
+            : { status: 'blocked', answer: '', engine: a.engine, show: false },
+        );
+      } catch (err) {
+        console.warn('[qa] sin respuesta', err);
+        await rt.updateQuestion(q.id, { status: 'error', show: false }).catch(() => undefined);
+      } finally {
+        inFlight.delete(q.id);
+        renderQuestions();
+      }
+    });
+  }
+  function queueAnswers() {
+    if (!presenter) return;
+    for (const q of questions) if (!q.status) answerOne(q);
+  }
+  let lastQa = '';
+  let qaTimer = 0;
+  function publishQa() {
+    if (!presenter) return;
+    clearTimeout(qaTimer);
+    qaTimer = window.setTimeout(() => {
+      const qa: QaItem[] = questions
+        .filter((q) => q.status === 'answered' && q.show && q.answer)
+        .slice(0, 24)
+        .map((q) => ({ q: q.text, a: q.answer!, name: q.name || 'Anónimo', ref: q.ref ?? '', engine: q.engine === 'cloud' ? 'Gemini API' : 'Gemini Nano' }));
+      const json = JSON.stringify(qa);
+      if (json === lastQa) return;
+      lastQa = json;
+      void send(rt.patchSlide({ qa }));
+    }, 600);
+  }
+  document.addEventListener('deck:gemini-key', () => {
+    const k = prompt('Key de Google AI Studio SOLO para responder preguntas si este equipo no tiene Gemini Nano.\nSe guarda en este navegador (no en el repo). Déjala vacía para borrarla.', geminiKey());
+    if (k !== null) setGeminiKey(k.trim());
+    void qaEngine().then((e) => alert(`Motor para Q&A: ${e === 'nano' ? 'Gemini Nano (local)' : e === 'cloud' ? 'Gemini API (key de este navegador)' : 'ninguno disponible'}`));
+  });
   const badge = document.querySelector<HTMLElement>('.presenter-badge')!;
+  // Aviso visible si abriste el enlace de presentadora pero el deck NO está transmitiendo.
+  const warn = document.createElement('button');
+  warn.type = 'button';
+  warn.className = 'broadcast-warn';
+  warn.hidden = true;
+  warn.addEventListener('click', () => document.dispatchEvent(new CustomEvent('deck:present')));
+  document.body.append(warn);
+  let broadcastError = '';
+  const send = (p: Promise<void>) =>
+    p.then(
+      () => {
+        if (broadcastError) {
+          broadcastError = '';
+          syncPresenterUi();
+        }
+      },
+      (err: { code?: string; message?: string }) => {
+        console.error('[live] no se pudo publicar', err);
+        broadcastError = err?.code === 'permission-denied' ? 'Firestore rechazó la escritura (¿cuenta de GitHub correcta?)' : 'Sin conexión con Firestore';
+        syncPresenterUi();
+      },
+    );
   const syncPresenterUi = () => {
     badge.hidden = !presenter;
+    const notLive = rt.mode === 'firebase' && presenterLink && !presenter;
+    warn.hidden = !notLive && !broadcastError;
+    warn.textContent = broadcastError
+      ? `Los celulares no se están actualizando: ${broadcastError}. Toca para reintentar.`
+      : 'Los celulares NO siguen el deck todavía · Toca aquí para Presentar en vivo (GitHub)';
     badge.textContent = (rt.mode === 'local' ? '● EN VIVO · ensayo local' : '● EN VIVO') + (questions.length ? ` · ${questions.length} ${questions.length === 1 ? 'pregunta' : 'preguntas'}` : '');
     document.querySelectorAll<HTMLElement>('[data-q-count]').forEach((el) => (el.textContent = String(questions.length)));
     if (presenter && !unsubQuestions) unsubQuestions = rt.onQuestions(onQuestions);
@@ -128,7 +212,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   qaPanel.className = 'qa-panel';
   qaPanel.hidden = true;
   qaPanel.setAttribute('aria-label', 'Preguntas del público');
-  qaPanel.innerHTML = `<header><h2>Preguntas del público</h2><button type="button" class="qa-close" aria-label="Cerrar"></button></header><ol class="qa-list"></ol><p class="qa-empty">Aún no hay preguntas. Llegan desde el botón <b>?</b> del celular.</p>`;
+  qaPanel.innerHTML = `<header><h2>Preguntas del público <small>respuestas con IA</small></h2><button type="button" class="qa-close" aria-label="Cerrar"></button></header><ol class="qa-list"></ol><p class="qa-empty">Aún no hay preguntas. Llegan desde el botón <b>Pregunta</b> del celular y Gemini Nano las responde aquí.</p>`;
   qaPanel.querySelector('.qa-close')!.append(icon(X, 20));
   document.body.append(qaPanel);
   const toggleQa = (open = qaPanel.hidden) => {
@@ -150,19 +234,51 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     const ids = new Set(questions.map((q) => q.id));
     list.querySelectorAll<HTMLElement>('[data-id]').forEach((li) => !ids.has(li.dataset.id!) && li.remove());
     for (const q of questions) {
-      if (list.querySelector(`[data-id="${CSS.escape(q.id)}"]`)) continue;
-      const li = document.createElement('li');
-      li.dataset.id = q.id;
+      const working = inFlight.has(q.id);
+      const sig = `${q.status}|${q.show}|${working}|${q.answer?.length ?? 0}`;
+      let li = list.querySelector<HTMLElement>(`[data-id="${CSS.escape(q.id)}"]`);
+      if (li?.dataset.sig === sig) continue; // por clave: solo se toca lo que cambió
+      if (!li) {
+        li = document.createElement('li');
+        li.dataset.id = q.id;
+        list.append(li);
+      }
+      li.dataset.sig = sig;
+      li.replaceChildren();
       const text = document.createElement('p');
       text.textContent = q.text;
       const meta = document.createElement('small');
       meta.textContent = `${q.name || 'Anónimo'} · ${q.slide}`;
-      const done = document.createElement('button');
-      done.type = 'button';
-      done.textContent = 'Respondida';
-      done.addEventListener('click', () => void rt.removeQuestion(q.id));
-      li.append(text, meta, done);
-      list.append(li);
+      const ans = document.createElement('div');
+      ans.className = 'qa-answer';
+      ans.dataset.status = working ? 'working' : (q.status ?? 'pending');
+      ans.textContent = working
+        ? 'La IA está respondiendo…'
+        : q.status === 'answered'
+          ? q.answer!
+          : q.status === 'blocked'
+            ? 'La IA la marcó como no apropiada: no se mostrará.'
+            : q.status === 'error'
+              ? 'Sin respuesta: no hay Gemini Nano en este equipo (o falló). Menú → Key de Gemini, y luego Regenerar.'
+              : 'En cola…';
+      if (q.status === 'answered') {
+        const src = document.createElement('small');
+        src.textContent = `${q.engine === 'cloud' ? 'Gemini API' : 'Gemini Nano'} · confianza ${q.confidence} · slide: ${q.ref}`;
+        ans.append(src);
+      }
+      const actions = document.createElement('div');
+      actions.className = 'qa-actions';
+      const btn = (label: string, fn: () => void) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.addEventListener('click', fn);
+        actions.append(b);
+      };
+      if (q.status === 'answered') btn(q.show ? 'Ocultar del slide' : 'Mostrar en el slide', () => void rt.updateQuestion(q.id, { show: !q.show }));
+      if (!working) btn('Regenerar', () => answerOne(q));
+      btn('Borrar', () => void rt.removeQuestion(q.id));
+      li.append(text, meta, ans, actions);
     }
   }
 
@@ -202,7 +318,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
     const s = active();
     const kind = kindOf(s);
     const qid = (s.dataset.q as QuestionId | undefined) ?? null;
-    void rt.patchSlide({
+    void send(rt.patchSlide({
       index,
       total: sections.length,
       label: s.dataset.label ?? '',
@@ -213,9 +329,9 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
       digest: kind === 'content' || kind === 'demo' ? digestOf(s) : null,
       duration: 30,
       players: players.length,
-    });
+    }));
     // Kahoot: la pregunta se abre (y arranca el tiempo) al llegar a su slide.
-    if (qid && !slide?.openedAt?.[qid]) void rt.openQuestion(qid);
+    if (qid && !slide?.openedAt?.[qid]) void send(rt.openQuestion(qid));
     if (kind === 'podium') publishPodium();
   }
 
@@ -229,7 +345,36 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   rt.onSlide((s) => {
     slide = s;
     renderPolls();
+    renderQaSlide();
   });
+
+  let qaShown = '';
+  function renderQaSlide() {
+    const items = slide?.qa ?? [];
+    const json = JSON.stringify(items);
+    if (json === qaShown) return;
+    qaShown = json;
+    document.querySelectorAll('[data-qa-count]').forEach((el) => (el.textContent = String(items.length)));
+    document.querySelectorAll<HTMLElement>('[data-qa]').forEach((grid) => {
+      grid.replaceChildren(
+        ...(items.length
+          ? items.map((it, i) => {
+              const card = document.createElement('article');
+              card.className = 'qa-card';
+              card.style.setProperty('--i', String(i));
+              const q = document.createElement('h3');
+              q.textContent = it.q;
+              const a = document.createElement('p');
+              a.textContent = it.a;
+              const f = document.createElement('small');
+              f.textContent = `${it.name} · ${it.engine}${it.ref && it.ref !== 'Ninguno' ? ` · ver «${it.ref}»` : ''}`;
+              card.append(q, a, f);
+              return card;
+            })
+          : [Object.assign(document.createElement('p'), { className: 'qa-wait', textContent: 'Escanea el QR del inicio y toca «Pregunta» en tu celular: Gemini Nano la responde aquí.' })]),
+      );
+    });
+  }
   rt.onPlayers((p) => {
     players = p;
     renderLobby();
@@ -353,11 +498,13 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
       return;
     }
     // Se publica SOLO la respuesta de esta pregunta, en el momento de revelar.
-    void rt.patchSlide({
-      revealed: { ...slide.revealed, [q]: true },
-      results: { ...slide.results, [q]: tally(votes, q) },
-      answers: { ...slide.answers, [q]: answers[q] },
-    });
+    void send(
+      rt.patchSlide({
+        revealed: { ...slide.revealed, [q]: true },
+        results: { ...slide.results, [q]: tally(votes, q) },
+        answers: { ...slide.answers, [q]: answers[q] },
+      }),
+    );
   };
   sections.forEach((s) => {
     const q = s.dataset.q as QuestionId | undefined;
@@ -466,7 +613,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
 
   function publishPodium() {
     if (!presenter) return;
-    void rt.patchSlide({ podium: ranking().slice(0, 10).map(({ name, score, code }) => ({ name, score, code })) });
+    void send(rt.patchSlide({ podium: ranking().slice(0, 10).map(({ name, score, code }) => ({ name, score, code })) }));
   }
 
   // ── Reacciones flotantes ───────────────────────────────────────────

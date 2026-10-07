@@ -8,7 +8,7 @@ Este repo tiene **dos apps independientes**:
 
 | Carpeta | Qué es | URL |
 |---|---|---|
-| [`slides/`](slides) | **Deck interactivo** (37 slides) + **app del público** en `/live/`: apodos, espejo del slide actual, 3 preguntas tipo Kahoot, likes, ⭐, reacciones, preguntas privadas para la presentadora, cards con tu foto estilo cómic y podio con código de ganador. | https://fluid-generative-ui-slides.web.app |
+| [`slides/`](slides) | **Deck interactivo** (38 slides) + **app del público** en `/live/`: apodos, espejo del slide actual, 3 preguntas tipo Kahoot, likes, ⭐, reacciones, preguntas del público respondidas con Gemini Nano, cards con tu foto estilo cómic y podio con código de ganador. | https://fluid-generative-ui-slides.web.app |
 | [`demo/`](demo) | **Rumbo**: planificador de escapadas por República Dominicana. Una web agéntica con UI generativa en streaming, en React. | https://fluid-generative-ui-demo.web.app |
 
 ## Rumbo: la demo

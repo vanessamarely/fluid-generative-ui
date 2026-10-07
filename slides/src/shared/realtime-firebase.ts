@@ -166,6 +166,9 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
         () => cb([]), // sin permiso (público): no hay nada que mostrar
       );
     },
+    async updateQuestion(id, patch) {
+      await updateDoc(doc(sub('questions'), id), patch);
+    },
     async removeQuestion(id) {
       await deleteDoc(doc(sub('questions'), id));
     },

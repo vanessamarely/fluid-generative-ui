@@ -143,6 +143,7 @@ function render(full: boolean) {
   if (kind === 'join') return renderLobby(screen);
   if (kind === 'podium') return renderPodium(screen);
   if (kind === 'cards') return renderCardsCta(screen);
+  if (kind === 'qa') return renderQa(screen);
   if (kind === 'end') return renderEnd(screen);
   return renderContent(screen);
 }
@@ -350,6 +351,22 @@ function renderPodium(screen: HTMLElement) {
           : `<h1>¡Gracias por jugar!</h1><p class="muted">Acertaste ${correctCount(myVotes, slide?.answers ?? {})} de 3. El podio está en la pantalla.</p>`
     }
     <p class="fine">Tu código: <b>${myCode}</b></p>
+  </section>`;
+}
+
+function renderQa(screen: HTMLElement) {
+  const items = slide?.qa ?? [];
+  screen.innerHTML = `<section class="card-sheet">
+    <p class="kicker">Sus preguntas · respondidas por Gemini Nano</p>
+    <h1>${items.length ? `${items.length} ${items.length === 1 ? 'respuesta' : 'respuestas'}` : '¿Tienes una pregunta?'}</h1>
+    ${
+      items.length
+        ? `<ol class="qa-items">${items
+            .map((it) => `<li><b>${esc(it.q)}</b><p>${esc(it.a)}</p><small>${esc(it.name)} · ${esc(it.engine)}${it.ref && it.ref !== 'Ninguno' ? ` · slide «${esc(it.ref)}»` : ''}</small></li>`)
+            .join('')}</ol>`
+        : '<p class="muted">Toca <b>Pregunta</b> abajo: la IA la responde con lo que vimos en la charla y aparece aquí y en la pantalla.</p>'
+    }
+    <p class="fine">Respuestas generadas con IA y revisadas por la presentadora. Pueden tener errores: verifica en el repo.</p>
   </section>`;
 }
 
@@ -667,7 +684,7 @@ function openAsk() {
   dlg.className = 'ask-sheet';
   dlg.innerHTML = `<form>
     <h2>${icon(MessageCircleQuestion, 22)} ¿Tienes una pregunta?</h2>
-    <p class="fine">Le llega solo a Vanessa (no sale en la pantalla) con tu apodo${name ? ` <b>${esc(name)}</b>` : ''} y el slide actual. Las responde al final.</p>
+    <p class="fine">Le llega a Vanessa con tu apodo${name ? ` <b>${esc(name)}</b>` : ''}. Gemini Nano la responde con lo visto en la charla; la respuesta aparece al final en la pantalla y aquí (ella puede ocultarla).</p>
     <textarea name="q" rows="4" maxlength="280" required placeholder="Ej.: ¿Cómo mido el CLS de mi app?"></textarea>
     <p class="fine" data-ask-msg role="status"></p>
     <div class="row"><button class="btn ghost" type="button" data-cancel>Cancelar</button><button class="btn primary" type="submit">${icon(Send, 18)} Enviar</button></div>
