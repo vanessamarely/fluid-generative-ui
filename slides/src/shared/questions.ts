@@ -70,14 +70,18 @@ export const QUESTIONS: Record<QuestionId, Question> = {
   },
 };
 
-// Reacciones con íconos SVG (Lucide), no emojis.
-export const REACTIONS = ['fire', 'clap', 'mind', 'idea', 'heart', 'rocket'] as const;
+// Reacciones con íconos SVG (Lucide), no emojis. La barra del celular muestra 4:
+//  fire (fuego) · heart (like) · laugh (para las viñetas) · ask (tengo una pregunta).
+// Las demás se conservan por compatibilidad con sesiones anteriores.
+export const REACTIONS = ['fire', 'heart', 'laugh', 'ask', 'clap', 'mind', 'idea', 'rocket'] as const;
 export type Reaction = (typeof REACTIONS)[number];
 export const REACTION_META: Record<Reaction, { icon: string; label: string; color: string }> = {
   fire: { icon: 'flame', label: 'Fuego', color: '#ea4335' },
+  heart: { icon: 'heart', label: 'Like', color: '#ea4335' },
+  laugh: { icon: 'laugh', label: 'Me hizo reír', color: '#f9ab00' },
+  ask: { icon: 'message-circle-question', label: 'Tengo una pregunta', color: '#4285f4' },
   clap: { icon: 'hand', label: 'Aplauso', color: '#f9ab00' },
   mind: { icon: 'brain', label: 'Mente volada', color: '#a142f4' },
   idea: { icon: 'lightbulb', label: 'Idea', color: '#f9ab00' },
-  heart: { icon: 'heart', label: 'Me encanta', color: '#ea4335' },
   rocket: { icon: 'rocket', label: 'A producción', color: '#4285f4' },
 };

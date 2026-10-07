@@ -3,7 +3,6 @@
 //  · Pantallas con altura reservada; los cambios se aplican por clave (sin recrear todo).
 //  · La card se genera EN EL DISPOSITIVO: la foto nunca sale del teléfono.
 import {
-  Brain,
   Camera,
   Check,
   Circle,
@@ -11,15 +10,14 @@ import {
   Download,
   Flame,
   GitBranch,
-  Hand,
   Heart,
   IdCard,
-  Lightbulb,
+  Laugh,
   Map as MapIcon,
+  MessageCircleQuestion,
   NotebookPen,
   Presentation,
   Radio,
-  Rocket,
   Send,
   Shuffle,
   Sparkles,
@@ -39,10 +37,12 @@ import { starRepo } from '../shared/github';
 import { QUESTIONS, REACTION_META, type QuestionId, type Reaction } from '../shared/questions';
 import { correctCount, getRealtime, type CardType, type Realtime, type SlideState, type Votes } from '../shared/realtime';
 
-const ICONS = { Brain, Camera, Check, Download, Flame, GitBranch, Hand, Heart, IdCard, Lightbulb, Map: MapIcon, NotebookPen, Presentation, Radio, Rocket, Send, Shuffle, Sparkles, Star, Trophy, X };
+const ICONS = { Camera, Check, Download, Flame, GitBranch, Heart, IdCard, Laugh, Map: MapIcon, MessageCircleQuestion, NotebookPen, Presentation, Radio, Send, Shuffle, Sparkles, Star, Trophy, X };
 const SHAPES: IconNode[] = [Triangle, Diamond, Circle, Square];
-const REACTION_ICONS: Record<Reaction, IconNode> = { fire: Flame, clap: Hand, mind: Brain, idea: Lightbulb, heart: Heart, rocket: Rocket };
-const REACTION_BAR: Reaction[] = ['fire', 'clap', 'mind', 'idea'];
+// Fuego (lo de siempre), like, risa (para las viñetas) y "tengo una pregunta".
+const REACTION_ICONS: Partial<Record<Reaction, IconNode>> = { fire: Flame, heart: Heart, laugh: Laugh, ask: MessageCircleQuestion };
+const REACTION_BAR: Reaction[] = ['fire', 'heart', 'laugh', 'ask'];
+const REACTION_SHORT: Partial<Record<Reaction, string>> = { fire: 'Fuego', heart: 'Like', laugh: 'Risa', ask: 'Pregunta' };
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string, root: ParentNode = document) => root.querySelector<T>(sel)!;
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -108,7 +108,7 @@ async function boot() {
       notes.push({ label: s.label, tip: s.tip });
       store.set('notes', notes);
     }
-    $('[data-status]').textContent = `En vivo · ${s.label} · ${s.index + 1}/${s.total}`;
+    $('[data-status]').textContent = s.total ? `En vivo · ${s.label} · ${s.index + 1}/${s.total}` : 'Conectado · esperando a que la presentadora abra el deck…';
     renderScore();
     if (view === 'live') render(changed);
   });
@@ -125,7 +125,8 @@ function renderScore() {
   const el = $('[data-score]');
   const answered = Object.keys(myVotes).length;
   el.hidden = !name;
-  el.innerHTML = `${icon(Trophy, 16)} ${correctCount(myVotes, slide?.answers ?? {})}/${answered || 0} aciertos`;
+  el.innerHTML = `${icon(Trophy, 16)} ${correctCount(myVotes, slide?.answers ?? {})}/${answered || 0}<span class="score-label"> aciertos</span>`;
+  el.title = 'Aciertos / respondidas';
 }
 
 // ── Pantallas ───────────────────────────────────────────────────────────
@@ -231,9 +232,24 @@ function renderPoll(screen: HTMLElement, qid: QuestionId) {
   </section>`;
   screen.querySelectorAll<HTMLButtonElement>('.answer').forEach((b) =>
     b.addEventListener('click', async () => {
-      if (myVotes[qid] || closed(qid)) return;
+      if (myVotes[qid] || closed(qid) || b.classList.contains('pending')) return;
       b.classList.add('pending');
-      await rt.vote(qid, b.dataset.opt!);
+      const msg = $('[data-msg]', screen);
+      msg.className = 'poll-msg';
+      msg.textContent = 'Enviando…';
+      try {
+        await rt.vote(qid, b.dataset.opt!);
+        // En Firebase la confirmación llega por onMyVotes; mientras, marcamos la elegida.
+        if (!myVotes[qid]) {
+          myVotes = { ...myVotes, [qid]: b.dataset.opt! };
+          updatePoll(screen);
+        }
+      } catch (err) {
+        console.error('[live] voto', err);
+        b.classList.remove('pending');
+        msg.className = 'poll-msg bad';
+        msg.textContent = closed(qid) ? 'La pregunta ya se cerró.' : 'No se pudo enviar tu respuesta. Revisa tu conexión y toca otra vez.';
+      }
     }),
   );
   updatePoll(screen);
@@ -271,9 +287,29 @@ function updatePoll(screen: HTMLElement) {
 function renderContent(screen: HTMLElement) {
   const tip = slide?.tip;
   const demo = slide?.kind === 'demo';
-  screen.innerHTML = `<section class="card-sheet">
-    <p class="kicker">Ahora en pantalla</p>
-    <h1>${esc(slide?.title || 'La charla está por empezar')}</h1>
+  const d = slide?.digest;
+  const started = Boolean(slide?.total);
+  const pct = started ? Math.round(((slide!.index + 1) / slide!.total) * 100) : 0;
+  // Espejo del slide: el mismo texto que se proyecta, legible en el celular.
+  screen.innerHTML = `<section class="mirror" data-tone="${(slide?.index ?? 0) % 4}">
+    <div class="mirror-top">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span>${started ? `En pantalla · ${slide!.index + 1}/${slide!.total}` : 'Esperando a que empiece'}</span>
+      <span class="mirror-progress" aria-hidden="true"><i style="width:${pct}%"></i></span>
+    </div>
+    ${d?.eyebrow ? `<p class="kicker">${esc(d.eyebrow)}</p>` : ''}
+    <h1>${esc(slide?.title || slide?.label || 'La charla está por empezar')}</h1>
+    ${d?.lede ? `<p class="mirror-lede">${esc(d.lede)}</p>` : ''}
+    ${
+      d?.points?.length
+        ? `<ul class="mirror-points">${d.points
+            .map((p) => `<li data-tone="${esc(p.tone ?? '')}">${p.h ? `<b>${esc(p.h)}</b>` : ''}${p.p ? `<span>${esc(p.p)}</span>` : ''}</li>`)
+            .join('')}</ul>`
+        : ''
+    }
+    ${d?.code ? `<figure class="mirror-code">${d.code.file ? `<figcaption>${esc(d.code.file)}</figcaption>` : ''}<pre><code>${esc(d.code.text)}</code></pre></figure>` : ''}
+  </section>
+  <section class="card-sheet">
     ${tip ? `<div class="pocket">${icon(NotebookPen, 18)}<p><b>Nota de bolsillo</b><br>${esc(tip)}</p></div>` : ''}
     ${slide?.label ? `<label class="field my-note"><span>Mi nota sobre este slide</span><textarea rows="2" maxlength="400" data-my-note placeholder="Algo que quiero probar…">${esc(notes.find((n) => n.label === slide!.label)?.mine ?? '')}</textarea></label>` : ''}
     ${demo ? `<a class="btn wide primary" href="${DEMO_URL}" target="_blank" rel="noreferrer">${icon(MapIcon, 18)} Abrir la demo en tu celular</a>` : ''}
@@ -597,19 +633,78 @@ function setupMenu() {
 function setupReactions() {
   const bar = $('[data-reactions]');
   bar.innerHTML = REACTION_BAR.map(
-    (r) => `<button type="button" data-r="${r}" aria-label="${REACTION_META[r].label}" style="--c:${REACTION_META[r].color}">${icon(REACTION_ICONS[r], 26)}</button>`,
+    (r) =>
+      `<button type="button" data-r="${r}" title="${REACTION_META[r].label}" style="--c:${REACTION_META[r].color}">${icon(REACTION_ICONS[r]!, 24)}<span>${REACTION_SHORT[r]}</span></button>`,
   ).join('');
   let last = 0;
   bar.addEventListener('click', async (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-r]');
-    if (!b || !rt || Date.now() - last < 900) return; // las reglas también lo limitan
+    if (!b || !rt) return;
+    const r = b.dataset.r as Reaction;
+    if (r === 'ask') return openAsk();
+    if (Date.now() - last < 900) return; // las reglas también lo limitan
     last = Date.now();
     b.classList.remove('pop');
     void b.offsetWidth;
     b.classList.add('pop');
     navigator.vibrate?.(15);
-    await rt.react(b.dataset.r as Reaction).catch(() => undefined);
+    // El corazón también cuenta como like de la charla (una vez por persona).
+    if (r === 'heart' && !liked) {
+      liked = true;
+      store.set('liked', true);
+      void rt.setLike(true).catch(() => undefined);
+      screen().querySelector('[data-like]')?.setAttribute('aria-pressed', 'true');
+    }
+    await rt.react(r).catch(() => undefined);
   });
+}
+const screen = () => $('#screen');
+
+// Preguntas para la presentadora: texto libre, por eso NO se proyecta (solo ella las lee).
+let lastAsk = 0;
+function openAsk() {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'ask-sheet';
+  dlg.innerHTML = `<form>
+    <h2>${icon(MessageCircleQuestion, 22)} ¿Tienes una pregunta?</h2>
+    <p class="fine">Le llega solo a Vanessa (no sale en la pantalla) con tu apodo${name ? ` <b>${esc(name)}</b>` : ''} y el slide actual. Las responde al final.</p>
+    <textarea name="q" rows="4" maxlength="280" required placeholder="Ej.: ¿Cómo mido el CLS de mi app?"></textarea>
+    <p class="fine" data-ask-msg role="status"></p>
+    <div class="row"><button class="btn ghost" type="button" data-cancel>Cancelar</button><button class="btn primary" type="submit">${icon(Send, 18)} Enviar</button></div>
+  </form>`;
+  document.body.append(dlg);
+  const close = () => {
+    dlg.close();
+    dlg.remove();
+  };
+  dlg.addEventListener('cancel', () => dlg.remove());
+  $('[data-cancel]', dlg).addEventListener('click', close);
+  dlg.querySelector('form')!.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = dlg.querySelector('textarea')!.value.trim();
+    const msg = $('[data-ask-msg]', dlg);
+    if (!text) return;
+    if (Date.now() - lastAsk < 15000) {
+      msg.textContent = 'Espera unos segundos antes de enviar otra.';
+      return;
+    }
+    const send = dlg.querySelector<HTMLButtonElement>('[type="submit"]')!;
+    send.disabled = true;
+    msg.textContent = 'Enviando…';
+    try {
+      await rt.ask({ name: name ?? 'Anónimo', text: text.slice(0, 280), slide: (slide?.label ?? '').slice(0, 80) });
+      void rt.react('ask').catch(() => undefined);
+      lastAsk = Date.now();
+      msg.textContent = '¡Enviada! Gracias.';
+      setTimeout(close, 1100);
+    } catch (err) {
+      console.error('[live] pregunta', err);
+      send.disabled = false;
+      msg.textContent = 'No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.';
+    }
+  });
+  dlg.showModal();
+  dlg.querySelector('textarea')!.focus();
 }
 
 void boot();

@@ -5,15 +5,41 @@
 //    celulares solo leen un documento y Firestore se mantiene en el plan gratuito.
 //  · Las listas (lobby, muro) se actualizan por CLAVE: se agregan nodos, no se recrea nada.
 import QRCode from 'qrcode';
-import { createElement, Brain, Check, Circle, Diamond, Flame, Hand, Heart, Lightbulb, Rocket, Square, Triangle, type IconNode } from 'lucide';
+import { createElement, Brain, Check, Circle, Diamond, Flame, Hand, Heart, Laugh, Lightbulb, MessageCircleQuestion, Rocket, Square, Triangle, X, type IconNode } from 'lucide';
 import { cardHTML, winnerCode } from '../shared/card';
 import { REPO_URL, SESSION_PARAM } from '../shared/config';
 import { getStarCount } from '../shared/github';
 import { QUESTIONS, REACTION_META, parseAnswerKey, type AnswerKey, type QuestionId, type Reaction } from '../shared/questions';
-import { getRealtime, scoreFor, tally, type CardData, type LiveKind, type Player, type SlideState, type VoteRecord } from '../shared/realtime';
+import { getRealtime, scoreFor, tally, type AudienceQuestion, type CardData, type SlideDigest, type LiveKind, type Player, type SlideState, type VoteRecord } from '../shared/realtime';
 
 const SHAPES: IconNode[] = [Triangle, Diamond, Circle, Square];
-const REACTION_ICONS: Record<Reaction, IconNode> = { fire: Flame, clap: Hand, mind: Brain, idea: Lightbulb, heart: Heart, rocket: Rocket };
+const REACTION_ICONS: Record<Reaction, IconNode> = { fire: Flame, heart: Heart, laugh: Laugh, ask: MessageCircleQuestion, clap: Hand, mind: Brain, idea: Lightbulb, rocket: Rocket };
+
+// Espejo para los celulares: el TEXTO del slide (no una captura). Pesa ~1 KB y se lee igual en
+// cualquier pantalla; los celulares ya escuchan este documento, así que no cuesta lecturas extra.
+const clean = (el: Element | null | undefined, max = 160) => el?.textContent?.replace(/\s+/g, ' ').trim().slice(0, max) || undefined;
+const toneOf = (el: Element) => ['blue', 'green', 'yellow', 'red'].find((c) => el.classList.contains(c));
+function digestOf(s: HTMLElement): SlideDigest {
+  const points: SlideDigest['points'] = [];
+  const push = (h?: string, p?: string, tone?: string) => {
+    if ((h || p) && points.length < 6) points.push({ h, p, tone });
+  };
+  s.querySelectorAll('.box').forEach((b) => push(clean(b.querySelector('h3')), clean(b.querySelector('p')), toneOf(b)));
+  if (!points.length) s.querySelectorAll('.node').forEach((n) => push(clean(n.querySelector('.v')) ?? clean(n.querySelector('.k1')), clean(n.querySelector('.d')), toneOf(n)));
+  if (!points.length)
+    s.querySelectorAll('.comic .panel').forEach((p) => push(clean(p.querySelector('.cap')), [...p.querySelectorAll('.bubble')].map((b) => clean(b)).join(' · ')));
+  if (!points.length) s.querySelectorAll('.vs-numbers > div:not(.vs)').forEach((d) => push(clean(d.querySelector('.n')), clean(d.querySelector('.label'))));
+  if (!points.length) s.querySelectorAll('li, .socials .pill').forEach((li) => push(undefined, clean(li)));
+  const pre = s.querySelector('.code pre');
+  const code = pre?.textContent ? { file: clean(s.querySelector('.code .bar span')), text: pre.textContent.split('\n').slice(0, 14).join('\n').slice(0, 700) } : undefined;
+  const digest: SlideDigest = {
+    eyebrow: clean(s.querySelector('.eyebrow, .section-num'))?.replace(/^\/\/\s*/, ''),
+    lede: clean(s.querySelector('.lead, .sub, .statement p, .comic-note, .cover-sub'), 240),
+    points,
+    code,
+  };
+  return JSON.parse(JSON.stringify(digest)); // Firestore no acepta campos undefined
+}
 
 function icon(node: IconNode, size = 28, color?: string): SVGElement {
   const el = createElement(node);
@@ -42,10 +68,19 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
   // Solo la presentadora autenticada (o ?presenter en ensayo local) controla el deck en vivo.
   let presenter = rt.isPresenterSession();
   let answers: AnswerKey = {};
+  let questions: AudienceQuestion[] = [];
+  let unsubQuestions: (() => void) | null = null;
+  const onQuestions = (qs: AudienceQuestion[]) => {
+    questions = qs;
+    syncPresenterUi();
+    renderQuestions();
+  };
   const badge = document.querySelector<HTMLElement>('.presenter-badge')!;
   const syncPresenterUi = () => {
     badge.hidden = !presenter;
-    badge.textContent = rt.mode === 'local' ? '● EN VIVO · ensayo local' : '● EN VIVO';
+    badge.textContent = (rt.mode === 'local' ? '● EN VIVO · ensayo local' : '● EN VIVO') + (questions.length ? ` · ${questions.length} ${questions.length === 1 ? 'pregunta' : 'preguntas'}` : '');
+    document.querySelectorAll<HTMLElement>('[data-q-count]').forEach((el) => (el.textContent = String(questions.length)));
+    if (presenter && !unsubQuestions) unsubQuestions = rt.onQuestions(onQuestions);
     // Revelar y moderar SOLO existen para la presentadora: el público no ve el botón.
     document.querySelectorAll<HTMLElement>('[data-reveal]').forEach((b) => (b.hidden = !presenter));
     document.querySelectorAll<HTMLElement>('[data-presenter-ui]').forEach((el) => (el.hidden = !presenter));
@@ -87,6 +122,49 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
       alert('No se pudo iniciar sesión. Revisa que GitHub esté habilitado en Firebase Authentication y que este dominio esté autorizado.');
     }
   });
+
+  // ── Preguntas del público: solo la presentadora las ve (tecla Q o menú) ──
+  const qaPanel = document.createElement('aside');
+  qaPanel.className = 'qa-panel';
+  qaPanel.hidden = true;
+  qaPanel.setAttribute('aria-label', 'Preguntas del público');
+  qaPanel.innerHTML = `<header><h2>Preguntas del público</h2><button type="button" class="qa-close" aria-label="Cerrar"></button></header><ol class="qa-list"></ol><p class="qa-empty">Aún no hay preguntas. Llegan desde el botón <b>?</b> del celular.</p>`;
+  qaPanel.querySelector('.qa-close')!.append(icon(X, 20));
+  document.body.append(qaPanel);
+  const toggleQa = (open = qaPanel.hidden) => {
+    if (!presenter) return;
+    qaPanel.hidden = !open;
+    if (open) renderQuestions();
+  };
+  qaPanel.querySelector('.qa-close')!.addEventListener('click', () => toggleQa(false));
+  document.addEventListener('deck:questions', () => toggleQa());
+  addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === 'q') toggleQa();
+  });
+  function renderQuestions() {
+    if (qaPanel.hidden) return;
+    const list = qaPanel.querySelector('.qa-list')!;
+    (qaPanel.querySelector('.qa-empty') as HTMLElement).hidden = questions.length > 0;
+    // Por clave: solo se agregan o quitan las que cambian.
+    const ids = new Set(questions.map((q) => q.id));
+    list.querySelectorAll<HTMLElement>('[data-id]').forEach((li) => !ids.has(li.dataset.id!) && li.remove());
+    for (const q of questions) {
+      if (list.querySelector(`[data-id="${CSS.escape(q.id)}"]`)) continue;
+      const li = document.createElement('li');
+      li.dataset.id = q.id;
+      const text = document.createElement('p');
+      text.textContent = q.text;
+      const meta = document.createElement('small');
+      meta.textContent = `${q.name || 'Anónimo'} · ${q.slide}`;
+      const done = document.createElement('button');
+      done.type = 'button';
+      done.textContent = 'Respondida';
+      done.addEventListener('click', () => void rt.removeQuestion(q.id));
+      li.append(text, meta, done);
+      list.append(li);
+    }
+  }
 
   // Cargar respuestas desde un answers.json LOCAL (no está en el repo ni en el bundle).
   document.addEventListener('deck:answers', () => {
@@ -132,6 +210,7 @@ export async function initLive(stage: HTMLElement, sections: HTMLElement[]) {
       kind,
       qid,
       tip: s.dataset.tip ?? null,
+      digest: kind === 'content' || kind === 'demo' ? digestOf(s) : null,
       duration: 30,
       players: players.length,
     });

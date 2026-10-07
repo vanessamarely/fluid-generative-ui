@@ -17,6 +17,23 @@ export interface PollResult {
   total: number;
 }
 
+/** Resumen del slide que ven los celulares (espejo ligero: texto, no captura). */
+export interface SlideDigest {
+  eyebrow?: string;
+  lede?: string;
+  points: { h?: string; p?: string; tone?: string }[];
+  code?: { file?: string; text: string };
+}
+
+export interface AudienceQuestion {
+  id: string;
+  uid: string;
+  name: string;
+  text: string;
+  slide: string;
+  at: number;
+}
+
 export interface SlideState {
   index: number;
   total: number;
@@ -25,6 +42,7 @@ export interface SlideState {
   kind: LiveKind;
   qid?: QuestionId | null;
   tip?: string | null;
+  digest?: SlideDigest | null;
   /** segundos que dura cada pregunta */
   duration: number;
   /** epoch ms (hora del servidor) en que se abrió cada pregunta */
@@ -98,6 +116,8 @@ export interface Realtime {
   vote(q: QuestionId, option: string): Promise<void>;
   onMyVotes(cb: (v: Votes) => void): Unsub;
   react(emoji: Reaction): Promise<void>;
+  /** Duda para la presentadora (no se proyecta). */
+  ask(q: { name: string; text: string; slide: string }): Promise<void>;
   publishCard(card: Omit<CardData, 'id' | 'createdAt' | 'hidden'>): Promise<void>;
 
   // Solo el deck agrega
@@ -106,6 +126,9 @@ export interface Realtime {
   onVotes(cb: (all: VoteRecord[]) => void): Unsub;
   onReaction(cb: (emoji: Reaction) => void): Unsub;
   onCards(cb: (cards: CardData[]) => void): Unsub;
+  /** Solo presentadora (las reglas no dejan leerlas a nadie más). */
+  onQuestions(cb: (qs: AudienceQuestion[]) => void): Unsub;
+  removeQuestion(id: string): Promise<void>;
   setCardHidden(id: string, hidden: boolean): Promise<void>;
 
   /** Solo presentadora: login con GitHub para poder escribir la sesión. */

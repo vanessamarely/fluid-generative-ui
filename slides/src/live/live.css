@@ -140,7 +140,9 @@ main { max-width: 520px; margin: 0 auto; min-height: 60dvh; }
 
 /* Reacciones: barra fija abajo, botones grandes para el pulgar */
 .reactions-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: center; gap: 8px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); border-top: 2px solid var(--line); }
-.reactions-bar button { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface); color: var(--c); display: grid; place-items: center; cursor: pointer; }
+.reactions-bar button { flex: 1; max-width: 92px; min-height: 52px; padding: 4px 2px; border-radius: 16px; border: 2px solid var(--line); background: var(--surface); color: var(--c); display: grid; place-items: center; gap: 1px; cursor: pointer; }
+.reactions-bar button span { font: 500 11px var(--sans); color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.reactions-bar button[data-r='ask'] { background: var(--p-blue); }
 .reactions-bar button.pop { animation: pop 380ms cubic-bezier(0.2, 1.4, 0.4, 1); }
 
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
@@ -153,3 +155,42 @@ main { max-width: 520px; margin: 0 auto; min-height: 60dvh; }
 .chips button { min-height: 38px; padding: 6px 12px; border: 2px solid var(--line); border-radius: 999px; background: var(--bg); font-size: 14px; cursor: pointer; }
 .chips button[aria-checked='true'] { background: var(--ht-yellow); color: #1e1e1e; box-shadow: inset 0 0 0 1px var(--line); }
 .link { border: 0; background: none; text-decoration: underline; padding: 0; cursor: pointer; }
+
+/* ── Espejo del slide en vivo ─────────────────────────────────────────── */
+#screen { display: grid; gap: 12px; }
+.mirror { position: relative; background: var(--surface); border: 2px solid var(--line); border-radius: 24px; padding: 18px 18px 20px; display: grid; gap: 10px; animation: rise 240ms ease-out both; overflow: hidden; }
+.mirror::before { content: ''; position: absolute; inset: 0 0 auto; height: 6px; background: var(--blue); }
+.mirror[data-tone='1']::before { background: var(--red); }
+.mirror[data-tone='2']::before { background: var(--yellow); }
+.mirror[data-tone='3']::before { background: var(--green); }
+.mirror h1 { margin: 0; font-size: clamp(22px, 6.4vw, 28px); line-height: 1.15; overflow-wrap: anywhere; }
+.mirror .kicker { margin: 0; }
+.mirror-top { display: flex; align-items: center; gap: 8px; font: 400 12px var(--mono); color: var(--ink-dim); }
+.mirror-progress { flex: 1; height: 4px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 12%, transparent); overflow: hidden; }
+.mirror-progress i { display: block; height: 100%; background: var(--ink); transition: width 300ms; }
+.live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+.mirror-lede { margin: 0; font-size: 16px; line-height: 1.45; }
+.mirror-points { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mirror-points li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; border: 2px solid color-mix(in srgb, var(--ink) 14%, transparent); background: var(--bg); font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+.mirror-points li span { color: var(--ink-dim); }
+.mirror-points li[data-tone='blue'] { background: var(--p-blue); border-color: transparent; }
+.mirror-points li[data-tone='green'] { background: var(--p-green); border-color: transparent; }
+.mirror-points li[data-tone='yellow'] { background: var(--p-yellow); border-color: transparent; }
+.mirror-points li[data-tone='red'] { background: var(--p-red); border-color: transparent; }
+.mirror-points li[data-tone]:not([data-tone='']) span { color: var(--ink); }
+.mirror-code { margin: 0; border-radius: 14px; background: #1e1e1e; color: #f0f0f0; overflow: hidden; }
+.mirror-code figcaption { padding: 6px 12px; font: 400 11.5px var(--mono); color: #c4c4c4; border-bottom: 1px solid #3a3a3a; }
+.mirror-code pre { margin: 0; padding: 10px 12px; font: 400 12px/1.5 var(--mono); overflow-x: auto; }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } .mirror { animation: none; } }
+
+/* ── Hoja "Tengo una pregunta" ───────────────────────────────────────── */
+.ask-sheet { width: min(480px, calc(100vw - 24px)); margin: auto auto 12px; padding: 0; border: 2px solid var(--line); border-radius: 24px; background: var(--surface); color: var(--ink); }
+.ask-sheet::backdrop { background: rgba(0, 0, 0, 0.45); }
+.ask-sheet form { display: grid; gap: 12px; padding: 18px; }
+.ask-sheet h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 20px; }
+.ask-sheet textarea { min-height: 110px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--ink); font: 16px var(--sans); resize: vertical; }
+.ask-sheet .row { justify-content: flex-end; }
+
+.score { white-space: nowrap; }
+@media (max-width: 400px) { .score-label { display: none; } .brand span { font-size: 14px; } }

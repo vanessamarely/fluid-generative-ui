@@ -8,7 +8,7 @@ Este repo tiene **dos apps independientes**:
 
 | Carpeta | Qué es | URL |
 |---|---|---|
-| [`slides/`](slides) | **Deck interactivo** (37 slides) + **app del público** en `/live/`: apodos, 3 preguntas tipo Kahoot, likes, ⭐, reacciones, cards con tu foto estilo cómic y podio con código de ganador. | https://fluid-generative-ui-slides.web.app |
+| [`slides/`](slides) | **Deck interactivo** (37 slides) + **app del público** en `/live/`: apodos, espejo del slide actual, 3 preguntas tipo Kahoot, likes, ⭐, reacciones, preguntas privadas para la presentadora, cards con tu foto estilo cómic y podio con código de ganador. | https://fluid-generative-ui-slides.web.app |
 | [`demo/`](demo) | **Rumbo**: planificador de escapadas por República Dominicana. Una web agéntica con UI generativa en streaming, en React. | https://fluid-generative-ui-demo.web.app |
 
 ## Rumbo: la demo
@@ -53,7 +53,7 @@ npm run dev:slides
 - **Ensayo sin internet**: agrega `?local` al deck y a `/live/`. Cada pestaña es un asistente y se comunican por `BroadcastChannel`.
 - **Ensayo con Firestore sin ensuciar la sesión real**: `?session=ensayo1` (el QR lo incluye).
 
-Atajos del deck: `←/→` navegar · **V** revelar respuesta · **L** claro/oscuro · **F** pantalla completa · **S** miniaturas · **M** menú.
+Atajos del deck: `←/→` navegar · **V** revelar respuesta · **Q** preguntas del público · **L** claro/oscuro · **F** pantalla completa · **S** miniaturas · **M** menú.
 
 ### Variables de entorno
 

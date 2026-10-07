@@ -1,4 +1,4 @@
-import { emptySlide, type CardData, type Player, type Realtime, type SlideState, type VoteRecord } from './realtime';
+import { emptySlide, type AudienceQuestion, type CardData, type Player, type Realtime, type SlideState, type VoteRecord } from './realtime';
 import type { Reaction } from './questions';
 
 interface LocalDb {
@@ -7,10 +7,11 @@ interface LocalDb {
   likes: Record<string, true>;
   votes: Record<string, VoteRecord>;
   cards: Record<string, CardData>;
+  questions: Record<string, AudienceQuestion>;
 }
 
 const KEY = 'fgui.local.db';
-const empty = (): LocalDb => ({ slide: emptySlide(), players: {}, likes: {}, votes: {}, cards: {} });
+const empty = (): LocalDb => ({ slide: emptySlide(), players: {}, likes: {}, votes: {}, cards: {}, questions: {} });
 
 function read(): LocalDb {
   try {
@@ -94,6 +95,10 @@ export function createLocalRealtime(): Realtime {
       channel.postMessage({ type: 'reaction', emoji });
       reactionListeners.forEach((l) => l(emoji));
     },
+    async ask(q) {
+      const id = crypto.randomUUID().slice(0, 8);
+      write((db) => (db.questions[id] = { ...q, id, uid: me, at: Date.now() }));
+    },
     async publishCard(card) {
       write((db) => (db.cards[me] = { ...card, id: me, createdAt: Date.now(), hidden: false }));
     },
@@ -108,6 +113,10 @@ export function createLocalRealtime(): Realtime {
       };
     },
     onCards: (cb) => sub((db) => cb(Object.values(db.cards).sort((a, b) => b.createdAt - a.createdAt))),
+    onQuestions: (cb) => sub((db) => cb(Object.values(db.questions).sort((a, b) => a.at - b.at))),
+    async removeQuestion(id) {
+      write((db) => delete db.questions[id]);
+    },
     async setCardHidden(id, hidden) {
       write((db) => {
         if (db.cards[id]) db.cards[id].hidden = hidden;

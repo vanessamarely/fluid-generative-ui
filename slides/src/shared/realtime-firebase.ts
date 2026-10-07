@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import {
   Timestamp,
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -29,7 +30,7 @@ import {
 } from 'firebase/firestore';
 import { firebaseConfig, PRESENTER_GITHUB_ID, SESSION_ID } from './config';
 import { getFirebaseApp } from './firebase';
-import { emptySlide, type CardData, type Player, type Realtime, type SlideState, type VoteRecord, type Votes } from './realtime';
+import { emptySlide, type AudienceQuestion, type CardData, type Player, type Realtime, type SlideState, type VoteRecord, type Votes } from './realtime';
 import type { QuestionId, Reaction } from './questions';
 
 const QS: QuestionId[] = ['q1', 'q2', 'q3'];
@@ -100,6 +101,9 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
     async react(emoji) {
       await setDoc(doc(sub('reactions'), uid()), { emoji, n: Math.floor(Math.random() * 1e9), at: serverTimestamp() });
     },
+    async ask(q) {
+      await addDoc(sub('questions'), { ...q, uid: uid(), at: serverTimestamp() });
+    },
     async publishCard(card) {
       await setDoc(doc(sub('cards'), uid()), { ...card, createdAt: serverTimestamp(), hidden: false });
     },
@@ -147,6 +151,23 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
           }),
         ),
       );
+    },
+    onQuestions(cb) {
+      const q = query(sub('questions'), orderBy('at', 'asc'), limit(100));
+      return onSnapshot(
+        q,
+        (snap) =>
+          cb(
+            snap.docs.map((d) => {
+              const data = d.data({ serverTimestamps: 'estimate' });
+              return { ...(data as AudienceQuestion), id: d.id, at: ms(data.at) ?? Date.now() };
+            }),
+          ),
+        () => cb([]), // sin permiso (público): no hay nada que mostrar
+      );
+    },
+    async removeQuestion(id) {
+      await deleteDoc(doc(sub('questions'), id));
     },
     async setCardHidden(id, hidden) {
       await updateDoc(doc(sub('cards'), id), { hidden });

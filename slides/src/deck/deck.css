@@ -459,3 +459,16 @@ section[data-deck-active] .wiggle { animation: wiggle 1.2s ease-in-out infinite;
 /* Zona del notch (guía DevFest: nada en el 21% derecho × 14% inferior): la columna derecha se detiene antes. */
 .card-frame .grid-2 > .stack:last-child { padding-bottom: 92px; }
 .card-frame .grid-2 > .code:last-child { margin-bottom: 92px; }
+
+/* ── Preguntas del público (solo presentadora) ───────────────────────── */
+.qa-panel { position: fixed; top: 70px; right: 16px; z-index: 60; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 100px); display: grid; grid-template-rows: auto 1fr auto; background: #fff; color: #1e1e1e; border: 2px solid #1e1e1e; border-radius: 20px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25); font-family: 'Google Sans', system-ui, sans-serif; overflow: hidden; }
+.qa-panel[hidden] { display: none; }
+.qa-panel header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px 18px; border-bottom: 2px solid #1e1e1e; background: #c3ecf6; }
+.qa-panel h2 { margin: 0; font-size: 18px; }
+.qa-close { width: 36px; height: 36px; border-radius: 10px; border: 2px solid #1e1e1e; background: #fff; display: grid; place-items: center; cursor: pointer; }
+.qa-list { margin: 0; padding: 10px 14px 10px 36px; overflow: auto; display: grid; gap: 10px; align-content: start; }
+.qa-list li p { margin: 0 0 2px; font-size: 17px; line-height: 1.35; overflow-wrap: anywhere; }
+.qa-list li small { display: block; font: 400 12px 'Roboto Mono', monospace; color: #4b4b4b; }
+.qa-list li button { margin-top: 6px; padding: 4px 10px; border-radius: 999px; border: 1.5px solid #1e1e1e; background: #fff; font: 500 12px inherit; font-family: inherit; cursor: pointer; }
+.qa-empty { margin: 0; padding: 14px 18px 18px; color: #4b4b4b; }
+.qa-empty[hidden] { display: none; }

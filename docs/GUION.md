@@ -8,6 +8,7 @@
 - DevTools abierto en la pestaña de la demo (Performance y AI assistance).
 - Plan B sin red: la demo con `?engine=mock` y los clips de los slides 9 y 32 (se reproducen solos).
 - Ensayo: `?session=ensayo1` en el deck. El día de la charla, sin parámetro.
+- El celular del público muestra un **espejo del slide** (título, puntos clave y código) y 4 reacciones: Fuego, Like (cuenta como like), Risa y **Pregunta**. Las preguntas llegan solo a ti: tecla **Q** o menú → *Preguntas del público* (el badge "EN VIVO" muestra cuántas hay).
 
 | # | Slide | Min | Qué decir / hacer |
 |---|---|---|---|
@@ -47,7 +48,7 @@
 | 34 | Muro de cards | 35:45 | Muestra las cards. Clic en una card para ocultarla (moderación). |
 | 35 | Checklist | 36:30 | Las 10 reglas (también en el README). |
 | 36 | Podio | 37:30 | El ganador muestra su código en el celular y lo comparas con la pantalla. |
-| 37 | Gracias / Q&A | 38:15 | Logo animado + QR del repo. |
+| 37 | Gracias / Q&A | 38:15 | Logo animado + QR del repo. Tecla **Q**: lee las preguntas que llegaron y marca *Respondida*. |
 
 ## Si algo falla
 

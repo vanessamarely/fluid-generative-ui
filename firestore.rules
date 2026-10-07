@@ -8,6 +8,7 @@ rules_version = '2';
 //   sessions/{sid}/votes/{uid}     ← { q1, q1At, … } — qNAt = hora del servidor (puntaje justo y no editable)
 //   sessions/{sid}/reactions/{uid} ← último emoji enviado (limitado a 1 cada ~0.8 s)
 //   sessions/{sid}/cards/{uid}     ← card/avatar de cada asistente
+//   sessions/{sid}/questions/{id}  ← dudas del público: SOLO la presentadora las lee (nada de texto libre en el proyector)
 //
 // Todo el público entra con Auth anónima: no pedimos datos personales.
 // Login con GitHub es opcional y solo se usa para dar ⭐ al repo.
@@ -74,10 +75,22 @@ service cloud.firestore {
       match /reactions/{uid} {
         allow read: if true;
         allow create: if isOwner(uid) && onlyKeys(['emoji', 'at', 'n'])
-          && request.resource.data.emoji in ['fire', 'clap', 'mind', 'idea', 'heart', 'rocket'];
+          && request.resource.data.emoji in ['fire', 'heart', 'laugh', 'ask', 'clap', 'mind', 'idea', 'rocket'];
         allow update: if isOwner(uid) && onlyKeys(['emoji', 'at', 'n'])
-          && request.resource.data.emoji in ['fire', 'clap', 'mind', 'idea', 'heart', 'rocket']
+          && request.resource.data.emoji in ['fire', 'heart', 'laugh', 'ask', 'clap', 'mind', 'idea', 'rocket']
           && request.time > resource.data.at + duration.value(800, 'ms');
+      }
+
+      match /questions/{id} {
+        allow read, delete: if isPresenter();
+        allow create: if request.auth != null
+          && onlyKeys(['uid', 'name', 'text', 'slide', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.at == request.time
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 280
+          && request.resource.data.name is string && request.resource.data.name.size() <= 32
+          && request.resource.data.slide is string && request.resource.data.slide.size() <= 80;
       }
 
       match /cards/{uid} {
