@@ -3,6 +3,7 @@ rules_version = '2';
 // Modelo de datos (una sesión por charla):
 //   sessions/{sid}                 ← slide actual, preguntas abiertas, resultados y podio. Solo la presentadora escribe.
 //   sessions/{sid}/private/answers ← respuestas correctas: SOLO la presentadora lee y escribe
+//   sessions/{sid}/names/{key}     ← reserva de apodo (único por sesión)
 //   sessions/{sid}/players/{uid}   ← apodo (generado, no texto libre) para el podio
 //   sessions/{sid}/likes/{uid}     ← 1 like por persona (idempotente)
 //   sessions/{sid}/votes/{uid}     ← { q1, q1At, … } — qNAt = hora del servidor (puntaje justo y no editable)
@@ -43,6 +44,15 @@ service cloud.firestore {
         allow read: if true;
         allow create, update: if isOwner(uid) && onlyKeys(['at']);
         allow delete: if isOwner(uid);
+      }
+
+      // Apodos únicos: el primero que lo crea se lo queda (no hay update ni delete).
+      match /names/{key} {
+        allow read: if true;
+        allow create: if request.auth != null && onlyKeys(['uid', 'at'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.at == request.time
+          && key.size() <= 40;
       }
 
       match /players/{uid} {

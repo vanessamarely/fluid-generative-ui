@@ -28,7 +28,7 @@ import {
 } from 'firebase/firestore';
 import { firebaseConfig, PRESENTER_GITHUB_ID, SESSION_ID } from './config';
 import { getFirebaseApp } from './firebase';
-import { emptySlide, type AudienceQuestion, type CardData, type Player, type Realtime, type SlideState, type VoteRecord, type Votes } from './realtime';
+import { emptySlide, nameKey, type AudienceQuestion, type CardData, type Player, type Realtime, type SlideState, type VoteRecord, type Votes } from './realtime';
 import type { QuestionId, Reaction } from './questions';
 
 const QS: QuestionId[] = ['q1', 'q2', 'q3'];
@@ -73,6 +73,23 @@ export async function createFirebaseRealtime(): Promise<Realtime> {
 
     async join(name) {
       await setDoc(doc(sub('players'), uid()), { name, at: serverTimestamp() });
+    },
+    async reserveName(name) {
+      const ref = doc(sub('names'), nameKey(name));
+      const owner = async () => (await getDoc(ref)).data()?.uid as string | undefined;
+      const current = await owner();
+      if (current) return current === uid();
+      try {
+        // Las reglas solo permiten CREAR (nunca sobrescribir): el primero gana.
+        await setDoc(ref, { uid: uid(), at: serverTimestamp() });
+        return true;
+      } catch {
+        return (await owner()) === uid();
+      }
+    },
+    async takenNames(names) {
+      const snaps = await Promise.all(names.map((n) => getDoc(doc(sub('names'), nameKey(n)))));
+      return new Set(names.filter((_, i) => snaps[i].exists() && snaps[i].data()?.uid !== uid()));
     },
     async setLike(on) {
       const ref = doc(sub('likes'), uid());

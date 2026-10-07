@@ -1,4 +1,4 @@
-import { emptySlide, type AudienceQuestion, type CardData, type Player, type Realtime, type SlideState, type VoteRecord } from './realtime';
+import { emptySlide, nameKey, type AudienceQuestion, type CardData, type Player, type Realtime, type SlideState, type VoteRecord } from './realtime';
 import type { Reaction } from './questions';
 
 interface LocalDb {
@@ -8,10 +8,11 @@ interface LocalDb {
   votes: Record<string, VoteRecord>;
   cards: Record<string, CardData>;
   questions: Record<string, AudienceQuestion>;
+  names: Record<string, string>;
 }
 
 const KEY = 'fgui.local.db';
-const empty = (): LocalDb => ({ slide: emptySlide(), players: {}, likes: {}, votes: {}, cards: {}, questions: {} });
+const empty = (): LocalDb => ({ slide: emptySlide(), players: {}, likes: {}, votes: {}, cards: {}, questions: {}, names: {} });
 
 function read(): LocalDb {
   try {
@@ -77,6 +78,17 @@ export function createLocalRealtime(): Realtime {
 
     async join(name) {
       write((db) => (db.players[me] = name));
+    },
+    async reserveName(name) {
+      const k = nameKey(name);
+      const owner = read().names[k];
+      if (owner && owner !== me) return false;
+      write((db) => (db.names[k] = me));
+      return true;
+    },
+    async takenNames(names) {
+      const db = read();
+      return new Set(names.filter((n) => db.names[nameKey(n)] && db.names[nameKey(n)] !== me));
     },
     async setLike(on) {
       write((db) => {

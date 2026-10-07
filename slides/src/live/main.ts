@@ -71,8 +71,18 @@ const store = {
 };
 
 // ── Apodos generados (sin texto libre: nada inapropiado llega al proyector) ──
-const NOUNS = ['Pixel', 'Token', 'Gremlin', 'Prompt', 'Nano', 'Slot', 'Stream', 'Frame', 'Agente', 'Cometa', 'Colibrí', 'Tiburón', 'Merengue', 'Mango', 'Coquí'];
-const ADJS = ['Veloz', 'Fluido', 'Valiente', 'Curioso', 'Brillante', 'Sereno', 'Épico', 'Ninja', 'Cósmico', 'Tropical', 'Ágil', 'Sabio'];
+// 30 × 30 = 900 combinaciones (todas en masculino o invariables para que concuerden).
+// Con 200 personas siempre hay de sobra, y Firestore garantiza que no se repitan (reserveName).
+const NOUNS = [
+  'Pixel', 'Token', 'Gremlin', 'Prompt', 'Nano', 'Slot', 'Stream', 'Frame', 'Agente', 'Cometa',
+  'Colibrí', 'Tiburón', 'Merengue', 'Mango', 'Coquí', 'Cohete', 'Byte', 'Cursor', 'Commit', 'Hook',
+  'Kernel', 'Router', 'Parser', 'Render', 'Plátano', 'Flamboyán', 'Manatí', 'Delfín', 'Tostón', 'Güiro',
+];
+const ADJS = [
+  'Veloz', 'Fluido', 'Valiente', 'Curioso', 'Brillante', 'Sereno', 'Épico', 'Ninja', 'Cósmico', 'Tropical',
+  'Ágil', 'Sabio', 'Audaz', 'Feliz', 'Genial', 'Elegante', 'Imparable', 'Legendario', 'Turbo', 'Caribeño',
+  'Galáctico', 'Atómico', 'Estelar', 'Asíncrono', 'Reactivo', 'Eléctrico', 'Dorado', 'Supersónico', 'Zen', 'Pro',
+];
 const randomName = () => `${NOUNS[Math.floor(Math.random() * NOUNS.length)]} ${ADJS[Math.floor(Math.random() * ADJS.length)]}`;
 
 const BANNED = /(put[ao]|mierd|cul[oa]|pend[ae]j|verga|coñ|carajo|fuck|shit|sex|nazi)/i;
@@ -148,36 +158,62 @@ function render(full: boolean) {
   return renderContent(screen);
 }
 
+// Propone 3 apodos LIBRES: genera candidatos distintos y descarta los ya reservados.
+async function freshOptions(): Promise<string[]> {
+  const pool = new Set<string>();
+  while (pool.size < 8) pool.add(randomName());
+  const taken = await rt.takenNames([...pool]).catch(() => new Set<string>());
+  return [...pool].filter((n) => !taken.has(n)).slice(0, 3);
+}
+
 function renderJoin(screen: HTMLElement) {
   screen.dataset.screen = 'join-name';
-  let options = [randomName(), randomName(), randomName()];
-  const draw = () => {
+  let options: string[] = [];
+  const draw = (msg = '') => {
     screen.innerHTML = `<section class="card-sheet">
       <p class="kicker">Bienvenida/o a la charla</p>
       <h1>Elige tu apodo</h1>
-      <p class="muted">Aparecerá en la pantalla y en el podio. Sin correo, sin contraseña.</p>
-      <div class="name-options" role="radiogroup" aria-label="Apodos">${options
-        .map((o, i) => `<button type="button" role="radio" aria-checked="${i === 0}" data-name="${esc(o)}">${esc(o)}</button>`)
-        .join('')}</div>
+      <p class="muted">Es único: nadie más en la sala lo tendrá. Aparece en la pantalla y en el podio. Sin correo, sin contraseña.</p>
+      <div class="name-options" role="radiogroup" aria-label="Apodos">${
+        options.length
+          ? options.map((o, i) => `<button type="button" role="radio" aria-checked="${i === 0}" data-name="${esc(o)}">${esc(o)}</button>`).join('')
+          : '<p class="muted">Buscando apodos libres…</p>'
+      }</div>
+      <p class="fine" data-join-msg role="status">${esc(msg)}</p>
       <div class="row"><button class="btn ghost" type="button" data-shuffle>${icon(Shuffle, 18)} Otros apodos</button>
-      <button class="btn primary" type="button" data-join>Entrar</button></div>
+      <button class="btn primary" type="button" data-join ${options.length ? '' : 'disabled'}>Entrar</button></div>
     </section>`;
     screen.querySelectorAll<HTMLButtonElement>('[data-name]').forEach((b) =>
       b.addEventListener('click', () => screen.querySelectorAll('[data-name]').forEach((x) => x.setAttribute('aria-checked', String(x === b)))),
     );
-    $('[data-shuffle]', screen).addEventListener('click', () => {
-      options = [randomName(), randomName(), randomName()];
-      draw();
-    });
-    $('[data-join]', screen).addEventListener('click', async () => {
-      name = screen.querySelector<HTMLElement>('[aria-checked="true"]')?.dataset.name ?? options[0];
-      store.set('name', name);
-      await rt.join(name);
-      renderScore();
-      render(true);
+    $('[data-shuffle]', screen).addEventListener('click', () => void load());
+    $('[data-join]', screen).addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const pick = screen.querySelector<HTMLElement>('[aria-checked="true"]')?.dataset.name ?? options[0];
+      btn.disabled = true;
+      $('[data-join-msg]', screen).textContent = 'Reservando tu apodo…';
+      try {
+        // Firestore lo reserva para tu id: si alguien lo tomó un segundo antes, te damos otros.
+        if (!(await rt.reserveName(pick))) return void load('Alguien acaba de tomar ese apodo. Elige otro:');
+        name = pick;
+        store.set('name', name);
+        await rt.join(name);
+        renderScore();
+        render(true);
+      } catch (err) {
+        console.error('[live] entrar', err);
+        btn.disabled = false;
+        $('[data-join-msg]', screen).textContent = 'No se pudo entrar. Revisa tu conexión e inténtalo de nuevo.';
+      }
     });
   };
-  draw();
+  const load = async (msg = '') => {
+    options = [];
+    draw(msg);
+    options = await freshOptions();
+    if (screen.dataset.screen === 'join-name') draw(msg);
+  };
+  void load();
 }
 
 function renderLobby(screen: HTMLElement) {

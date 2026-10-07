@@ -131,6 +131,10 @@ export interface Realtime {
 
   // Público
   join(name: string): Promise<void>;
+  /** Apodos únicos: reserva el apodo para este uid. false si ya es de otra persona. */
+  reserveName(name: string): Promise<boolean>;
+  /** Cuáles de estos apodos ya están reservados. */
+  takenNames(names: string[]): Promise<Set<string>>;
   setLike(on: boolean): Promise<void>;
   vote(q: QuestionId, option: string): Promise<void>;
   onMyVotes(cb: (v: Votes) => void): Unsub;
@@ -161,6 +165,10 @@ export interface Realtime {
   /** Login opcional con GitHub (scope public_repo) para dar ⭐. No guarda la identidad. */
   githubTokenForStar(): Promise<{ token: string; login: string } | null>;
 }
+
+/** Clave de un apodo: sin tildes ni mayúsculas ("Colibrí Ágil" → "colibri-agil"). */
+export const nameKey = (n: string) =>
+  n.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
 let instance: Promise<Realtime> | null = null;
 
